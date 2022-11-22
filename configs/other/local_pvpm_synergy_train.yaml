@@ -1,0 +1,59 @@
+project:
+  name: "Person-Re-Identification"
+  experiment_name: "BPBreID"
+  debug_mode: True
+  logger:
+    use_clearml: False
+    use_neptune: False
+    use_tensorboard: False
+    use_wandb: False
+    matplotlib_show: False
+
+data:
+  root: '~/datasets/reid'
+  type: 'image'
+  sources: ['synergy']
+  targets: ['synergy']
+  height: 256
+  width: 128
+  combineall: False
+  transforms: ['random_flip', 'random_erase']
+  save_dir: '/Users/vladimirsomers/Code/logs/deep-person-reid/resnet50_synergy_pose'
+  workers: 0
+
+
+sampler:
+  train_sampler: RandomIdentitySampler # sampler for source train loader
+  train_sampler_t: RandomIdentitySampler # sampler for target train loader
+  num_instances: 3 # number of instances per identity for RandomIdentitySampler
+
+model:
+  name: 'pose_p6s'
+  pretrained: True
+  save_model_flag: False
+  bpbreid:
+    pooling: 'softmax'
+    normalization: 'batch_norm_2d'
+    mask_filtering_training: True
+    mask_filtering_testing: True
+#  load_weights: 'pretrained_models/resnet50_market_xent.pth'
+
+loss:
+  name: 'part_based'
+  part_based:
+    name: 'part_based_triplet_loss_random_max_min' # ['inter_parts_triplet_loss', 'intra_parts_triplet_loss', 'part_based_triplet_loss_max', 'part_based_triplet_loss_mean', 'part_based_triplet_loss_min', 'part_based_triplet_loss_max_min', 'part_based_triplet_loss_random_max_min']
+  triplet:
+    weight_t: 1.
+    weight_x: 0.
+
+train:
+  batch_size: 20
+  eval_freq: 5
+  max_epoch: 2
+  print_freq: 1
+  batch_debug_freq: 2
+
+test:
+  visrank: False
+  visrank_per_body_part: False
+  vis_embedding_projection: False

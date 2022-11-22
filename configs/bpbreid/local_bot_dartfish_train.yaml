@@ -1,0 +1,101 @@
+project:
+    name: "Person-Re-Identification"
+    experiment_name: ""
+    notes: ""
+    tags: []
+    logger:
+      use_wandb: False
+
+dartfish:
+  train_size: 100
+  val_size: 20
+  test_size: 100
+  query_per_id: 1
+
+data:
+  root: '~/datasets/reid'
+  type: 'image'
+  sources: ['dartfish']
+  targets: ['dartfish']
+  height: 128 # 384
+  width: 128 # 192
+  combineall: False
+  transforms: ['rc', 're', 'rf']
+  masks:
+    preprocess: 'id'  # 'none', 'full', 'id', 'ids', 'bs_fu', 'bs_fu_bb', 'mu_sc', 'four', 'four_no', 'four_v', 'four_v_pif', 'five', 'five_v', 'six', 'six_no', 'seven_v', 'eight', 'eight_v', 'ten_ms', 'eleven', 'fourteen', 'fourteen'
+  save_dir: '/Users/vladimirsomers/Code/logs/deep-person-reid/bot_synergy'
+  masks_dir: 'none' # 'pifpaf' 'pifpaf_maskrcnn_filtering' 'isp_6_parts'
+  workers: 6
+
+sampler:
+  train_sampler: RandomIdentitySampler # sampler for source train loader
+  train_sampler_t: RandomIdentitySampler # sampler for target train loader
+  num_instances: 4 # number of instances per identity for RandomIdentitySampler
+
+model:
+  name: 'bpbreid'
+  pretrained: True
+  save_model_flag: True
+  bpbreid:
+    pooling: 'gap'  # ['gap', 'gmp', 'gwap', 'gwap2']
+    normalization: 'identity' # 'batch_norm_2d' 'identity'
+    mask_filtering_training: False
+    mask_filtering_testing: False
+    training_binary_visibility_score: True
+    testing_binary_visibility_score: True
+    last_stride: 1
+    learnable_attention_enabled: False
+    dim_reduce: 'none' # 'none', 'before_pooling', 'after_pooling', 'after_pooling_with_dropout', 'after_pooling_pcb'
+    dim_reduce_output: 512
+    backbone: 'resnet50' # 'hrnet32' 'resnet50' 'fastreid_resnet' 'fastreid_resnet_ibn' 'fastreid_resnet_nl' 'fastreid_resnet_ibn_nl'
+    test_embeddings: ['bn_globl'] #  ['globl', 'foreg', 'conct', 'parts']
+    test_use_target_segmentation: 'none' # 'none' 'hard' 'soft'
+    shared_parts_id_classifier: False
+    normalized_bned_embeddings: False
+
+loss:
+  name: 'part_based'
+  triplet:
+    margin: 0.3
+  part_based:
+    name: 'part_based_triplet_loss_mean' # ['inter_parts_triplet_loss', 'intra_parts_triplet_loss', 'part_based_triplet_loss_max', 'part_based_triplet_loss_mean', 'part_based_triplet_loss_min', 'part_based_triplet_loss_max_min', 'part_based_triplet_loss_random_max_min']
+    weights:
+      globl:
+        ce: 1.
+        tr: 1.
+      foreg:
+        ce: 0.
+        tr: 0.
+      conct:
+        ce: 0.
+        tr: 0.
+      parts:
+        ce: 0.
+        tr: 0.
+      pixls:
+        ce: 0.
+
+train:
+  batch_size: 64
+  eval_freq: 0
+  max_epoch: 1 # 45 120
+  stepsize: [40, 70] # [40, 70] [25, 35]
+  optim: 'adam' # 'adam', 'amsgrad', 'sgd', 'rmsprop', 'radam'
+  lr: 0.00035
+  lr_scheduler: 'warmup_multi_step' # 'single_step' 'multi_step' 'cosine' 'warmup_multi_step'
+
+test:
+  start_eval: 90
+  detailed_ranking: False
+  batch_size: 128
+  batch_size_pairwise_dist_matrix: 5000
+  normalize_feature: True
+  dist_metric: 'euclidean' # ['euclidean', 'cosine']
+  visrank: False
+  visrank_per_body_part: False
+  vis_embedding_projection: False
+  vis_feature_maps: False
+  visrank_topk: 10
+  visrank_count: 11
+  part_based:
+    dist_combine_strat: mean

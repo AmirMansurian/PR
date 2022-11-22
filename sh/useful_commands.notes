@@ -1,0 +1,22 @@
+# Update Pytorch
+conda install pytorch=1.7 torchvision cudatoolkit=10.0 -c pytorch
+
+tmux new -s pose_reid_training
+conda activate torchreid
+/home/vso/anaconda3/envs/torchreid/bin/python -u /home/vso/projects/deep-person-reid/scripts/main.py --config-file /home/vso/projects/deep-person-reid/configs/resnet50_market1501_pose_train.yaml
+Ctrl-b + d
+tmux attach-session -t pose_reid_training
+tensorboard --logdir=log/resnet50_synergy_pose
+ssh -L 8080:127.0.0.1:8080 -L 8008:127.0.0.1:8008 -L 8081:127.0.0.1:8081 -L 8001:127.0.0.1:8001 vso@10.3.12.28
+export CUDA_VISIBLE_DEVICES="0,1,2"
+
+/home/vso/anaconda3/envs/torchreid/bin/python -u /home/vso/projects/deep-person-reid/torchreid/hyperparameter/hyperparameter_optimizer.py
+
+clearml-agent daemon --gpus 2 --queue default  --docker nvidia/cuda -d
+clearml-agent daemon --stop --gpus 2 --queue default  --docker nvidia/cuda -d
+
+clearml-agent daemon --gpus 2 --queue default -d
+clearml-agent daemon --stop --gpus 2 --queue default -d
+
+chmod +x /home/vso/projects/deep-person-reid/sh/training.sh
+/home/vso/projects/deep-person-reid/sh/training.sh

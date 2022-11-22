@@ -1,0 +1,60 @@
+project:
+    name: "Person-Re-Identification"
+    experiment_name: ""
+    notes: ""
+    tags: []
+    logger:
+      use_clearml: False
+      use_neptune: False
+      use_tensorboard: True
+      use_wandb: True
+
+data:
+  root: '~/datasets/reid'
+  type: 'image'
+  sources: ['de_challenge_synergy']
+  targets: ['de_challenge_synergy']
+  height: 256
+  width: 128
+  combineall: False
+  transforms: ['rc', 're']
+  save_dir: '/home/vso/log/resenet_dechallenge'
+  workers: 10
+
+sampler:
+  train_sampler: RandomIdentitySampler # sampler for source train loader
+  train_sampler_t: RandomIdentitySampler # sampler for target train loader
+  num_instances: 4 # number of instances per identity for RandomIdentitySampler
+
+model:
+  name: 'resnet50_fc512'
+  pretrained: True
+  save_model_flag: True
+
+loss:
+  name: 'triplet'
+  triplet:
+    margin: 0.3
+
+train:
+  batch_size: 64
+  eval_freq: 0
+  max_epoch: 120
+  stepsize: [40, 70] # [40, 70] [25, 35]
+  optim: 'adam' # 'adam', 'amsgrad', 'sgd', 'rmsprop', 'radam'
+  lr: 0.00035
+  lr_scheduler: 'warmup_multi_step' # 'single_step' 'multi_step' 'cosine' 'warmup_multi_step'
+
+test:
+  start_eval: 90
+  detailed_ranking: False
+  batch_size: 128
+  batch_size_pairwise_dist_matrix: 5000
+  normalize_feature: True
+  dist_metric: 'euclidean' # ['euclidean', 'cosine']
+  visrank: True
+  visrank_per_body_part: False
+  vis_embedding_projection: False
+  vis_feature_maps: False
+  visrank_topk: 10
+  visrank_count: 5

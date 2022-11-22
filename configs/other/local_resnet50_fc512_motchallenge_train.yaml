@@ -1,0 +1,63 @@
+project:
+    name: "Person-Re-Identification"
+    experiment_name: ""
+    notes: ""
+    tags: []
+    logger:
+      use_clearml: False
+      use_neptune: False
+      use_tensorboard: True
+      use_wandb: True
+
+data:
+  root: '~/datasets/reid'
+  type: 'image'
+  sources: ['MOT17-02', 'MOT17-04', 'MOT17-05', 'MOT17-09', 'MOT17-10', 'MOT17-11', 'MOT17-13'] # 'market1501' 'occluded_duke' 'dukemtmcreid'
+  targets: ['market1501'] # 'MOT17-02', 'MOT17-04', 'MOT17-05', 'MOT17-09', 'MOT17-10', 'MOT17-11', 'MOT17-13'
+  height: 256 # 384
+  width: 128 # 192
+  combineall: False
+  transforms: ['rc', 'rf', 're']
+  save_dir: '/Users/vladimirsomers/Code/logs/deep-person-reid/resnet50_motchallenge'
+  workers: 0
+  motchallenge:
+    min_vis: 0.0
+    min_h: 0
+    min_w: 0
+    min_samples_per_id: 4
+    max_samples_per_id: 40
+    train_ratio: 0.6
+    ratio_query_per_id: 0.2
+    ratio_gallery_per_id: 1.0
+
+model:
+  name: 'resnet50_fc512'
+  pretrained: True
+  save_model_flag: False
+
+loss:
+  name: 'triplet'
+  triplet:
+    margin: 0.3
+
+train:
+  batch_size: 16
+  eval_freq: 0
+  max_epoch: 70 # 45 120
+  stepsize: [30, 50] # [40, 70] [25, 35]
+  optim: 'adam' # 'adam', 'amsgrad', 'sgd', 'rmsprop', 'radam'
+  lr: 0.00035
+  lr_scheduler: 'warmup_multi_step' # 'single_step' 'multi_step' 'cosine' 'warmup_multi_step'  fixbase_epoch: 0
+
+test:
+  evaluate: True # test only
+  start_eval: 90
+  batch_size: 6
+  normalize_feature: True
+  dist_metric: 'euclidean' # ['euclidean', 'cosine']
+  visrank: True
+  visrank_per_body_part: False
+  vis_embedding_projection: False
+  vis_feature_maps: False
+  visrank_topk: 10
+  visrank_count: 11

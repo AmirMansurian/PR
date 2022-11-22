@@ -1,0 +1,118 @@
+project:
+    name: "Person-Re-Identification"
+    experiment_name: ""
+    notes: ""
+    tags: []
+    logger:
+      use_clearml: False
+      use_neptune: False
+      use_tensorboard: True
+      use_wandb: True
+
+data:
+  root: '~/datasets/reid'
+  type: 'image'
+  sources: ['market1501']
+  targets: ['market1501', 'occluded_reid']
+  height: 384 # 384
+  width: 128 # 192
+  combineall: False
+  transforms: ['rc', 're', 'rf', 'cj'] # rfc old_rfc
+  ro:
+    p: .5
+    n: 1
+    min_overlap: 0.5
+    max_overlap: 0.8
+  cj:
+    brightness: 0.2
+    contrast: 0.15
+    saturation: 0.
+    hue: 0.
+    always_apply: False
+    p: 0.5
+  masks:
+    preprocess: 'eight'  # 'none', 'full', 'id', 'ids', 'bs_fu', 'bs_fu_bb', 'mu_sc', 'four', 'four_no', 'four_v', 'four_v_pif', 'five', 'five_v', 'six', 'six_no', 'seven_v', 'eight', 'eight_v', 'ten_ms', 'eleven', 'fourteen', 'fourteen'
+    background_computation_strategy: 'threshold'  # threshold, diff_from_max
+    softmax_weight: 15
+    mask_filtering_threshold: 0.5
+  save_dir: '/home/vso/log/bpbreid_occluded_duke'
+  masks_dir: 'pifpaf_maskrcnn_filtering' # 'pifpaf' 'pifpaf_maskrcnn_filtering' 'isp_6_parts'
+  workers: 6
+
+sampler:
+  train_sampler: RandomIdentitySampler # sampler for source train loader
+  train_sampler_t: RandomIdentitySampler # sampler for target train loader
+  num_instances: 4 # number of instances per identity for RandomIdentitySampler
+
+model:
+  name: 'bpbreid'
+  pretrained: True
+  save_model_flag: True
+  bpbreid:
+    pooling: 'gwap'  # ['gap', 'gmp', 'gwap', 'gwap2']
+    normalization: 'identity' # 'batch_norm_2d' 'identity'
+    mask_filtering_training: False
+    mask_filtering_testing: True
+    training_binary_visibility_score: True
+    testing_binary_visibility_score: True
+    last_stride: 1
+    learnable_attention_enabled: True
+    dim_reduce: 'after_pooling' # 'none', 'before_pooling', 'after_pooling', 'after_pooling_with_dropout', 'after_pooling_pcb'
+    dim_reduce_output: 512
+    backbone: 'hrnet32' # 'hrnet32' 'resnet50' 'fastreid_resnet' 'fastreid_resnet_ibn' 'fastreid_resnet_nl' 'fastreid_resnet_ibn_nl'
+    test_embeddings: ['bn_foreg', 'parts'] #  ['globl', 'foreg', 'conct', 'parts']
+    test_use_target_segmentation: 'none' # 'none' 'hard' 'soft'
+    shared_parts_id_classifier: False
+    normalized_bned_embeddings: False
+
+loss:
+  name: 'part_based'
+  triplet:
+    margin: 0.3
+  part_based:
+    name: 'part_based_triplet_loss_mean' # ['inter_parts_triplet_loss', 'intra_parts_triplet_loss', 'part_based_triplet_loss_max', 'part_based_triplet_loss_mean', 'part_based_triplet_loss_min', 'part_based_triplet_loss_max_min', 'part_based_triplet_loss_random_max_min']
+    ppl: 'cl'
+    weights:
+      globl:
+        ce: 1.
+        tr: 0.
+      foreg:
+        ce: 1.
+        tr: 1.
+      conct:
+        ce: 1.
+        tr: 0.
+      parts:
+        ce: 0.
+        tr: 1.
+      pixls:
+        ce: 0.45
+
+train:
+  batch_size: 64
+  eval_freq: 0
+  max_epoch: 120 # 45 120
+  stepsize: [40, 70] # [40, 70] [25, 35]
+  optim: 'adam' # 'adam', 'amsgrad', 'sgd', 'rmsprop', 'radam'
+  lr: 0.00035
+  lr_scheduler: 'warmup_multi_step' # 'single_step' 'multi_step' 'cosine' 'warmup_multi_step'
+  fixbase_epoch: 0
+  open_layers: ['global_avgpool', 'foreground_global_attention_pooling_head', 'background_global_attention_pooling_head',
+                'global_attention_pooling_head', 'pixel_classifier', 'global_identity_classifier',
+                'background_identity_classifier', 'foreground_identity_classifier', 'parts_identity_classifier']
+
+test:
+  start_eval: 90
+  detailed_ranking: False
+  batch_size: 128
+  batch_size_pairwise_dist_matrix: 5000
+  normalize_feature: True
+  dist_metric: 'euclidean' # ['euclidean', 'cosine']
+  visrank: True
+  visrank_per_body_part: False
+  vis_embedding_projection: False
+  vis_feature_maps: False
+  visrank_topk: 10
+  visrank_count: 11
+  part_based:
+    dist_combine_strat: mean

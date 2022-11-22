@@ -1,0 +1,25 @@
+use_gpu: True
+
+model:
+  name: 'osnet_x1_0'
+  pretrained: True
+  load_weights: 'pretrained_models/osnet_x1_0_market_256x128_amsgrad_ep150_stp60_lr0.0015_b64_fb10_softmax_labelsmooth_flip.pth'
+
+data:
+  type: 'image'
+  sources: ['market1501']
+  targets: ['market1501']
+  height: 256
+  width: 128
+  combineall: False
+  transforms: ['random_flip']
+  save_dir: 'log/osnet_x1_0_market1501_softmax'
+
+test:
+  batch_size: 100
+  dist_metric: 'euclidean'
+  normalize_feature: False
+  evaluate: True
+  eval_freq: -1
+  rerank: False
+  visrank: True

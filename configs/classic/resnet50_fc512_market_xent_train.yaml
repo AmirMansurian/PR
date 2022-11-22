@@ -1,0 +1,13 @@
+model:
+  name: 'resnet50_fc512'
+  pretrained: True
+
+data:
+  root: '~/datasets/reid'
+  sources: ['market1501']
+  targets: ['market1501']
+  transforms: ['random_flip']
+  save_dir: 'log/resnet50_fc512_market_xent_train'
+
+test:
+  batch_size: 300

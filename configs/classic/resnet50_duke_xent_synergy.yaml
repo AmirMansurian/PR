@@ -1,0 +1,25 @@
+model:
+  name: 'resnet50'
+  pretrained: True
+  load_weights: 'pretrained_models/resnet50_duke_xent.pth'
+
+data:
+  root: '~/datasets/reid'
+  type: 'image'
+  sources: ['synergy']
+  targets: ['synergy']
+  height: 256
+  width: 128
+  combineall: False
+  transforms: ['random_flip']
+  save_dir: 'log/resnet50_duke_xent_synergy'
+
+test:
+  batch_size: 300
+  dist_metric: 'euclidean'
+  normalize_feature: False
+  evaluate: True
+  eval_freq: -1
+  rerank: False
+  visrank: True
+  save_features: False

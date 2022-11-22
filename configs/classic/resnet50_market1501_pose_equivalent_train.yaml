@@ -1,0 +1,41 @@
+model:
+  name: 'resnet50'
+  pretrained: True
+#  load_weights: 'pretrained_models/resnet50_market_xent.pth'
+
+data:
+  root: '~/datasets/reid'
+  type: 'image'
+  sources: ['market1501']
+  targets: ['market1501']
+  height: 256
+  width: 128
+  combineall: False
+  transforms: []
+  save_dir: 'log/resnet50_market1501_pose_equivalent'
+#  identity_masks: True
+
+sampler:
+  train_sampler: RandomIdentitySampler # sampler for source train loader
+  train_sampler_t: RandomIdentitySampler # sampler for target train loader
+  num_instances: 4 # number of instances per identity for RandomIdentitySampler
+
+loss:
+  name: 'triplet'
+  triplet:
+    weight_t: 1.
+    weight_x: 0.
+
+train:
+  batch_size: 128
+  eval_freq: 20
+#  max_epoch: 1
+#test:
+#  batch_size: 3
+#  normalize_feature: False
+#  evaluate: True
+#  eval_freq: -1
+#  rerank: False
+#  visrank: True
+#  save_features: False
+

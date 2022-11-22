@@ -1,0 +1,25 @@
+model:
+  name: 'resnet50_fc512'
+  pretrained: True
+  load_weights: '/Users/vladimirsomers/Code/deep-person-reid/log/resnet50_fc512_market_xent_train/model/model.pth.tar-60'
+
+data:
+  root: '~/datasets/reid'
+  type: 'image'
+  sources: ['synergy']
+  targets: ['synergy']
+  height: 256
+  width: 128
+  combineall: False
+  transforms: ['random_flip']
+  save_dir: 'log/resnet50_fc512_market_xent_train'
+
+test:
+  batch_size: 300
+  dist_metric: 'euclidean'
+  normalize_feature: False
+  evaluate: True
+  eval_freq: -1
+  rerank: False
+  visrank: True
+  save_features: False

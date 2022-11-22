@@ -1,0 +1,28 @@
+use_gpu: True
+
+model:
+  name: 'resnet50'
+  pretrained: True
+  load_weights: 'pretrained_models/resnet50_market_xent.pth'
+
+data:
+  type: 'video'
+  sources: ['mars']
+  targets: ['mars']
+  height: 256
+  width: 128
+  combineall: False
+  transforms: ['random_flip', 'random_crop']
+  save_dir: 'log/resnet50_mars_softmax'
+
+video:
+  seq_len: 4
+
+test:
+  batch_size: 1
+  dist_metric: 'euclidean'
+  normalize_feature: False
+  evaluate: True
+  eval_freq: -1
+  rerank: False
+  visrank: True

@@ -1,0 +1,6 @@
+from __future__ import division, print_function, absolute_import
+
+from .old_bp_loss import OldBodyPartsLoss
+from .old_bp_loss_intra_id_mean import OldBPLossIntraIdMean
+from .old_bp_loss_intra_id_mean import OldBPLossIntraIdMean
+from .old_bp_loss_intra_part_triplets import OldBPLossIntraPartTriplets

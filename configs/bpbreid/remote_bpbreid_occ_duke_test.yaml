@@ -1,0 +1,110 @@
+project:
+    name: "Person-Re-Identification"
+    experiment_name: ""
+    notes: ""
+    tags: ["test"]
+    logger:
+      use_clearml: False
+      use_neptune: False
+      use_tensorboard: True
+      use_wandb: True
+
+data:
+  root: '~/datasets/reid'
+  type: 'image'
+  sources: ['occluded_duke']
+  targets: ['occluded_duke']
+  height: 384
+  width: 128
+  combineall: False
+  transforms: ['rc', 're']
+  masks:
+    preprocess: 'eight'  # 'none', 'full', 'id', 'ids', 'bs_fu', 'bs_fu_bb', 'mu_sc', 'four', 'four_no', 'four_v', 'four_v_pif', 'five_v', 'six', 'six_no', 'eight'
+    background_computation_strategy: 'threshold'  # threshold, diff_from_max
+    softmax_weight: 15
+    mask_filtering_threshold: 0.5
+  save_dir: '/home/vso/log/bpbreid_occluded_duke'
+  masks_dir: 'pifpaf_maskrcnn_filtering' # 'pifpaf' 'pifpaf_maskrcnn_filtering' 'isp_6_parts'
+  workers: 10
+
+sampler:
+  train_sampler: RandomIdentitySampler # sampler for source train loader
+  train_sampler_t: RandomIdentitySampler # sampler for target train loader
+  num_instances: 4 # number of instances per identity for RandomIdentitySampler
+
+model:
+  name: 'bpbreid'
+  pretrained: True
+#  load_weights: '/home/vso/log/posenet_occluded_duke/2021_07_29_03_56_56_56S2d21eaa8-9f88-4672-8453-c257112da6e6/2021_07_29_03_56_56_56S2d21eaa8-9f88-4672-8453-c257112da6e6model/model.pth.tar-120'
+#  load_weights: "/home/vso/log/posenet_occluded_duke/2022_02_23_16_18_25_18S821f0543-f269-4679-bf71-e08347d6c472/2022_02_23_16_18_25_18S821f0543-f269-4679-bf71-e08347d6c472model/model.pth.tar-120"
+#  load_weights: "/home/vso/log/posenet_occluded_duke/2022_02_24_13_15_22_15S91b8550d-e247-4e7f-a54a-566ed68692c8/2022_02_24_13_15_22_15S91b8550d-e247-4e7f-a54a-566ed68692c8model/model.pth.tar-120"
+#  load_weights: "/home/vso/log/posenet_occluded_duke/2022_02_25_03_09_23_09S25661863-39ea-41b5-9e9b-98b1bc88056e/2022_02_25_03_09_23_09S25661863-39ea-41b5-9e9b-98b1bc88056emodel/model.pth.tar-120" # 7176
+#  load_weights: "/home/vso/log/posenet_occluded_duke/2022_02_24_19_40_15_40Sd41f1656-bb93-4ec2-8bca-bac08b7591e3/2022_02_24_19_40_15_40Sd41f1656-bb93-4ec2-8bca-bac08b7591e3model/model.pth.tar-120" # 7164
+  # 7213 ibn six_new: 54.81 65.25
+#  load_weights: "/home/vso/log/posenet_occluded_duke/2022_02_26_11_27_38_27S5deeda3b-2e8f-4cf7-8b9f-897d946fe0c3/2022_02_26_11_27_38_27S5deeda3b-2e8f-4cf7-8b9f-897d946fe0c3model/model.pth.tar-120"
+  # 7217 training vis ibn six_new:
+#  load_weights: "/home/vso/log/posenet_occluded_duke/2022_02_26_11_28_39_28S1a80ebe4-5029-4bee-add7-9125343fab88/2022_02_26_11_28_39_28S1a80ebe4-5029-4bee-add7-9125343fab88model/model.pth.tar-120"
+  # 7214 ibn eight:
+#  load_weights: "/home/vso/log/posenet_occluded_duke/2022_02_26_11_27_44_27Sede0d264-387b-4125-97ee-37fa98d195ce/2022_02_26_11_27_44_27Sede0d264-387b-4125-97ee-37fa98d195cemodel/model.pth.tar-120"
+  # 7162 hrnet eight:
+#  load_weights: "/home/vso/log/posenet_occluded_duke/2022_02_24_19_36_41_36S39bad1d8-5596-4d7e-84ef-5f91c5af9052/2022_02_24_19_36_41_36S39bad1d8-5596-4d7e-84ef-5f91c5af9052model/model.pth.tar-120"
+#   7164 hrnet six_new:
+#  load_weights: "/home/vso/log/posenet_occluded_duke/2022_02_24_19_40_15_40Sd41f1656-bb93-4ec2-8bca-bac08b7591e3/2022_02_24_19_40_15_40Sd41f1656-bb93-4ec2-8bca-bac08b7591e3model/model.pth.tar-120"
+  # 7373 eight 384 IBN 56.09% 66.97%
+#  load_weights: /home/vso/log/posenet_occluded_duke/2022_02_28_22_04_36_04S2e1eded6-146e-45f5-9c4f-aa75eb4c65fe/2022_02_28_22_04_36_04S2e1eded6-146e-45f5-9c4f-aa75eb4c65femodel/model.pth.tar-120
+  # 7325 eight 384 IBN
+#  load_weights: /home/vso/log/posenet_occluded_duke/2022_02_28_00_33_28_33Sea703a6d-090b-417b-9528-e55c530b5542/2022_02_28_00_33_28_33Sea703a6d-090b-417b-9528-e55c530b5542model/model.pth.tar-120
+  # 7337 DUKE-MTMTC !!!!!!!     five_v 384 HRNET - 82.49% 91.74%
+#  load_weights: /home/vso/log/posenet_market/2022_02_28_12_19_39_19S54aef885-4613-4375-80da-854d72a68e20/2022_02_28_12_19_39_19S54aef885-4613-4375-80da-854d72a68e20model/model.pth.tar-120
+  # 7321 eight resnet50 256 - 53.5% 68.55%
+#  load_weights: /home/vso/log/posenet_occluded_duke/2022_02_28_00_28_10_28S773f817f-0331-4e77-9a53-c93061607a14/2022_02_28_00_28_10_28S773f817f-0331-4e77-9a53-c93061607a14model/model.pth.tar-120
+  # 7170 six_new HRnet 384 81.5 90.22
+#  load_weights: /home/vso/log/posenet_market/2022_02_25_01_40_39_40S25e6aad9-6cb2-4db3-962d-05c7ae095b62/2022_02_25_01_40_39_40S25e6aad9-6cb2-4db3-962d-05c7ae095b62model/model.pth.tar-120
+  # 7535 four_v HrNet 384
+#  load_weights: /home/vso/log/posenet_occluded_duke/2022_03_02_22_23_24_23S3d0158b8-0dde-4037-8f07-0497f1849377/2022_03_02_22_23_24_23S3d0158b8-0dde-4037-8f07-0497f1849377model/model.pth.tar-120
+#  load_weights: "/home/vso/log/mot_pipeline/8881/2022_05_12_19_34_48_34Sf64f9c1d-a20c-47a2-a6af-639e97a2c6b6model/job-8881_120_model.pth.tar" # 8881
+  load_weights: "/home/vso/log/bpbreid_occluded_duke/8981/2022_05_25_20_52_35_52S5f072fd0-e79c-41eb-9564-fcaffe615746model/job-8981_120_model.pth.tar" # 8981
+
+  save_model_flag: False
+  bpbreid:
+    pooling: 'gwap'  # ['gap', 'gmp', 'gwap', 'gwap2']
+    normalization: 'identity' # 'batch_norm_2d' 'identity'
+    mask_filtering_training: False
+    mask_filtering_testing: True
+    training_binary_visibility_score: True
+    testing_binary_visibility_score: True
+    last_stride: 1
+    learnable_attention_enabled: True
+    dim_reduce: 'after_pooling' # 'none', 'before_pooling', 'after_pooling', 'after_pooling_with_dropout'
+    dim_reduce_output: 256
+    backbone: 'hrnet32' # 'hrnet32' 'resnet50' 'fastreid_resnet' 'fastreid_resnet_ibn' 'fastreid_resnet_nl' 'fastreid_resnet_ibn_nl'
+    test_embeddings: ['bn_foreg', 'parts'] #  ['globl', 'foreg', 'conct', 'parts']
+    test_use_target_segmentation: 'none' # 'none' 'hard' 'soft'
+    shared_parts_id_classifier: False
+
+test:
+  evaluate: True # test only
+  start_eval: 90
+  batch_size: 64
+  batch_size_pairwise_dist_matrix: 5000
+  normalize_feature: True
+  dist_metric: 'euclidean' # ['euclidean', 'cosine']
+  detailed_ranking: False
+  visrank: False
+  visrank_per_body_part: False
+  vis_embedding_projection: False
+  vis_feature_maps: False
+  visrank_topk: 15
+  visrank_count: 1
+#  visrank_q_idx_list: [1881, 1329, 2144, 646, 1819, 1660, 1652, 130, 1014, 1221, 606]
+  visrank_q_idx_list: [2145]
+  # [1329, 2144, 646, 1819, 1660, 1652, 130, 1014, 1221, 606]
+  #  363 - 0114_c1_f0072838.jpg
+  #  942 - 4804_c6_f0202700.jpg
+  #  1974 - 0076_c1_f0065392.jpg
+  #  2013 - 4681_c6_f0155553.jpg
+  #  2081 - 4760_c7_f0184430.jpg
+  #  2145 - 0749_c1_f0188383.jpg
+  #  2207 - 4726_c6_f0169726.jpg
+  part_based:
+    dist_combine_strat: mean
