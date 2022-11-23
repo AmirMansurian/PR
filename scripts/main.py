@@ -4,7 +4,7 @@ import argparse
 import torch
 import torch.nn as nn
 import torchreid
-from tools.extract_part_based_features import extract_reid_features
+from kaggle.input.bpbreid.tools.extract_part_based_features import extract_reid_features
 from torchreid.data.data_augmentation import masks_preprocess_all
 from torchreid.data.datasets import get_image_dataset
 from torchreid.utils import (
