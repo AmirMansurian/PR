@@ -12,7 +12,7 @@ def readme():
 
 
 def find_version():
-    version_file = 'torchreid/__init__.py'
+    version_file = '/kaggle/input/bpbreid/torchreid/__init__.py'
     with open(version_file, 'r') as f:
         exec(compile(f.read(), version_file, 'exec'))
     return locals()['__version__']
@@ -29,13 +29,13 @@ def numpy_include():
 ext_modules = [
     Extension(
         'torchreid.metrics.rank_cylib.rank_cy',
-        ['torchreid/metrics/rank_cylib/rank_cy.pyx'],
+        ['/kaggle/input/bpbreid/torchreid/metrics/rank_cylib/rank_cy.pyx'],
         include_dirs=[numpy_include()],
     )
 ]
 
 
-def get_requirements(filename='requirements.txt'):
+def get_requirements(filename='/kaggle/input/bpbreid/requirements.txt'):
     here = osp.dirname(osp.realpath(__file__))
     with open(osp.join(here, filename), 'r') as f:
         requires = [line.replace('\n', '') for line in f.readlines()]
