@@ -29,7 +29,7 @@ def numpy_include():
 ext_modules = [
     Extension(
         'torchreid.metrics.rank_cylib.rank_cy',
-        ['/kaggle/input/bpbreid/torchreid/metrics/rank_cylib/rank_cy.pyx'],
+        ['/kaggle/working/bpbreid/torchreid/metrics/rank_cylib/rank_cy.pyx'],
         include_dirs=[numpy_include()],
     )
 ]
