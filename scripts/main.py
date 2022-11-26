@@ -4,7 +4,7 @@ import argparse
 import torch
 import torch.nn as nn
 import torchreid
-from tools.extract_part_based_features import extract_reid_features
+#from tools.extract_part_based_features import extract_reid_features
 from torchreid.data.data_augmentation import masks_preprocess_all
 from torchreid.data.datasets import get_image_dataset
 from torchreid.utils import (
@@ -256,9 +256,9 @@ def main():
     engine.run(**engine_run_kwargs(cfg))
     print('End of experiment {} with job id {} and creation date {}'.format(cfg.project.experiment_id, cfg.project.job_id, cfg.project.start_time))
 
-    if cfg.inference.enabled:
-        print("Starting inference on external data")
-        extract_reid_features(cfg, cfg.inference.input_folder, cfg.data.save_dir, model)
+    #if cfg.inference.enabled:
+       # print("Starting inference on external data")
+       # extract_reid_features(cfg, cfg.inference.input_folder, cfg.data.save_dir, model)
 
 
 def compute_parts_num_and_names(cfg):
