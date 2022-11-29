@@ -4,7 +4,7 @@ import argparse
 import torch
 import torch.nn as nn
 import torchreid
-#from tools.extract_part_based_features import extract_reid_features
+from tools.extract_part_based_features import extract_reid_features
 from torchreid.data.data_augmentation import masks_preprocess_all
 from torchreid.data.datasets import get_image_dataset
 from torchreid.utils import (
@@ -174,6 +174,10 @@ def main():
         type=bool,
         default=False,
     )
+    parser.add_argument(
+        '--epoch', type=int, default=5, help='number of epochs'
+    )
+
     args = parser.parse_args()
 
     cfg = get_default_config()
@@ -184,6 +188,10 @@ def main():
         cfg.project.config_file = os.path.basename(args.config_file)
     reset_config(cfg, args)
     cfg.merge_from_list(args.opts)
+
+    ################################
+    cfg.train.max_epoch = args.epoch
+    ################################
 
     # set parts information (number of parts K and each part name),
     # depending on the original loaded masks size or the transformation applied:
@@ -256,9 +264,9 @@ def main():
     engine.run(**engine_run_kwargs(cfg))
     print('End of experiment {} with job id {} and creation date {}'.format(cfg.project.experiment_id, cfg.project.job_id, cfg.project.start_time))
 
-    #if cfg.inference.enabled:
-       # print("Starting inference on external data")
-       # extract_reid_features(cfg, cfg.inference.input_folder, cfg.data.save_dir, model)
+    if cfg.inference.enabled:
+        print("Starting inference on external data")
+        extract_reid_features(cfg, cfg.inference.input_folder, cfg.data.save_dir, model)
 
 
 def compute_parts_num_and_names(cfg):

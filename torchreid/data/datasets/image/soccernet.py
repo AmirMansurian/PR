@@ -62,9 +62,9 @@ class SoccerNet(ImageDataset):
 
         self.check_before_run(required_files)
 
-        train, _= self.process_dir(self.train_dir, 1)
+        train, _ = self.process_dir(self.train_dir, 1)
         gallery, mapping = self.process_dir(self.gallery_dir, 2)
-        query, _ = self.process_dir(self.query_dir, 3, mapping=mapping)
+        query, _ = self.process_dir(self.query_dir, 3, mapping)
 
 
         super(SoccerNet, self).__init__(train, query, gallery, **kwargs)
@@ -81,8 +81,8 @@ class SoccerNet(ImageDataset):
 
             img_paths = glob.glob(osp.join(dir_path, '*.jpg'))
             for img_path in img_paths:
-                pid = img_path.split('\\')[-1][:-4].split('_')[0]
-                camid = img_path.split('\\')[-1][:-4].split('_')[1]
+                pid = img_path.split('/')[-1][:-4].split('_')[0]
+                camid = img_path.split('/')[-1][:-4].split('_')[1]
                 masks_path = self.infer_masks_path(img_path)
 
                 if (int(pid)) not in id_dict.keys():
@@ -101,64 +101,36 @@ class SoccerNet(ImageDataset):
                 idx = maps.index(player['pid'])
                 data[i]['pid'] = idx
 
-        #print(len(list(set([player['pid'] for player in data]))))
-        return data, None
+            return data, None
 
-        '''
-        if len(mapping) == 0:
-            print(len(data))
+        if mode == 2:
             ids = list(set([i['pid'] for i in data]))
-            for i, player in enumerate(data):
-                idx = ids.index(player['pid'])
-                data[i]['pid'] = idx
-
-            return data, seq2pid2label, previous_id_increment, ids
-
-        else:
-            print(len(data))
-            for i, player in enumerate(data):
-                idx = mapping.index(player['pid'])
-                data[i]['pid'] = idx
-            return data, seq2pid2label, previous_id_increment, []
-
-        
-        if len(mapping) == 0:
-            ids = list(set([i['pid'] for i in data]))
-            index = np.random.permutation(len(ids))[:10]
-            for player in [ids[j] for j in index]:
-                if len(id_dict[player]) > 100:
-                    idx = np.random.permutation(len(id_dict[player]))[:10]
-                    temp = [id_dict[player][f] for f in idx]
-                    for t in temp:
-                        data2.append(t)
-                else:
-                    for t in id_dict[player]:
-                        data2.append(t)
+            index = np.random.permutation(len(ids))[:350]
+            indice = [ids[j] for j in index]
+            for player in indice:
+                idx = np.random.permutation(len(id_dict[player]))[:10]
+                temp = [id_dict[player][f] for f in idx]
+                for t in temp:
+                    data2.append(t)
 
             for i, player in enumerate(data2):
-                idx = [ids[i] for i in index].index(player['pid'])
+                idx = indice.index(player['pid'])
                 data2[i]['pid'] = idx
-        else:
-            for player in mapping:
-                if len(id_dict[player]) > 100:
-                    idx = np.random.permutation(len(id_dict[player]))[:10]
-                    temp = [id_dict[player][f] for f in idx]
-                    for t in temp:
-                        data2.append(t)
-                else:
-                    for t in id_dict[player]:
-                        data2.append(t)
 
-            #data = [player for player in data if player['pid'] in mapping]
+            return data2, indice
+
+        if mode == 3:
+            indice = list(set([i['pid'] for i in data]))
+            indice = [i for i in indice if i in mapping]
+            for player in indice:
+                idx = np.random.permutation(len(id_dict[player]))
+                temp = [id_dict[player][f] for f in idx]
+                for t in temp:
+                    data2.append(t)
+
             for i, player in enumerate(data2):
                 idx = mapping.index(player['pid'])
                 data2[i]['pid'] = idx
-            return data2, seq2pid2label, previous_id_increment, []
-            
-        '''
 
-        #print([ids[i] for i in index])
-        #print(max([i['pid'] for i in data]))
-        #print(min([i['pid'] for i in data]))
-        #print([i['pid'] for i in data2])
-       # return data2, seq2pid2label, previous_id_increment, [ids[i] for i in index]
+            return data2, None
+
