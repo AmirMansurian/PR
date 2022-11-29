@@ -368,7 +368,8 @@ def evaluate_py(
     distmat, q_pids, g_pids, q_camids, g_camids, max_rank, eval_metric, q_anns=None, g_anns=None,
 ):
     if eval_metric == 'default':
-        return eval_market1501(distmat, q_pids, g_pids, q_camids, g_camids, max_rank)
+        return eval_soccernetv3(distmat, q_pids, g_pids, q_camids, g_camids, max_rank)
+        #return eval_market1501(distmat, q_pids, g_pids, q_camids, g_camids, max_rank)
     elif eval_metric == 'cuhk03':
         return eval_cuhk03(distmat, q_pids, g_pids, q_camids, g_camids, max_rank)
     elif eval_metric == 'soccernetv3':
