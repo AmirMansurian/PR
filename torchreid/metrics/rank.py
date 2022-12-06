@@ -45,11 +45,11 @@ def eval_soccernetv3(distmat, q_pids, g_pids, q_action_indices, g_action_indices
 
         # remove gallery samples from different action than the query
         order = indices[q_idx]
-        #remove = (g_action_indices[order] != q_action_idx)
-        #keep = np.invert(remove)
+        remove = (g_action_indices[order] != q_action_idx)
+        keep = np.invert(remove)
 
         # compute cmc curve
-        raw_cmc = matches[q_idx] # binary vector, positions with value 1 are correct matches
+        raw_cmc = matches[q_idx][keep] # binary vector, positions with value 1 are correct matches
         if not np.any(raw_cmc):
             print("Does not appear in gallery: q_idx {} - q_pid {} - q_action_idx {}".format(q_idx, q_pid, q_action_idx))
             # this condition is true when query identity does not appear in gallery
