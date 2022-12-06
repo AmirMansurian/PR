@@ -50,6 +50,7 @@ class SoccerNet(ImageDataset):
         else:
             self.masks_parts_numbers, self.has_background, self.masks_suffix = None, None, None
 
+         
         # allow alternative directory structure
         self.data_dir = self.dataset_dir
         self.train_dir = osp.join(self.data_dir, 'train2')
@@ -61,7 +62,7 @@ class SoccerNet(ImageDataset):
         ]
 
         self.check_before_run(required_files)
-
+        np.random.seed(0)
         train, _ = self.process_dir(self.train_dir, 1)
         gallery, mapping = self.process_dir(self.gallery_dir, 2)
         query, _ = self.process_dir(self.query_dir, 3, mapping)
