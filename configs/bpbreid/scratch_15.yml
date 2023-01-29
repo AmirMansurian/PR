@@ -9,7 +9,7 @@ project:
     use_wandb: False
 
 data:
-  root: '/kaggle/working/'
+  root: ''
   type: 'image'
   sources: ['soccernet']
   targets: ['soccernet']
@@ -18,13 +18,13 @@ data:
   combineall: False
   transforms: ['rc', 'rf', 're']
   ro:
-    path: "/kaggle/input/pascal-voc-2012"
+    path: ""
     p: 0.5
     n: 1
     min_overlap: 0.2
     max_overlap: 0.8
 
-  save_dir: 'kaggle/working/'
+  save_dir: 'experiments/'
   workers: 0
 
 sampler:
@@ -35,7 +35,7 @@ sampler:
 model:
   name: 'bpbreid'
   pretrained: True
-  load_weights: '/kaggle/working/resnet50-19c8e357.pth'
+  load_weights: 'resnet50-19c8e357.pth'
   save_model_flag: True
   bpbreid:
     pooling: 'gwap'
