@@ -1,9 +1,9 @@
 from __future__ import division, absolute_import
-from torchreid.losses.part_based_triplet_loss import PartBasedTripletLoss
+from torchreid.losses.part_averaged_triplet_loss import PartAveragedTripletLoss
 import torch
 
 
-class InterPartsTripletLoss(PartBasedTripletLoss):
+class InterPartsTripletLoss(PartAveragedTripletLoss):
 
     def __init__(self, **kwargs):
         super(InterPartsTripletLoss, self).__init__(**kwargs)
@@ -15,7 +15,7 @@ class InterPartsTripletLoss(PartBasedTripletLoss):
 
     def compute_mixed_body_parts_dist_matrices(self, body_parts_features):
         body_parts_features = body_parts_features.flatten(start_dim=0, end_dim=1).unsqueeze(1)
-        body_parts_dist_matrices = self._body_parts_pairwise_distance_matrix(body_parts_features, False, self.epsilon).squeeze()
+        body_parts_dist_matrices = self._part_based_pairwise_distance_matrix(body_parts_features, False, self.epsilon).squeeze()
         return body_parts_dist_matrices
 
     def hard_mine_triplet_loss(self, dist, targets): # TODO extract code for mask generation into separate method

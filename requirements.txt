@@ -23,3 +23,7 @@ pandas
 tabulate
 deepdiff
 wandb
+neptune-client
+clearml
+monai
+torchmetrics==0.10.3

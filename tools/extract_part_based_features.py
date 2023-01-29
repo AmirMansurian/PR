@@ -2,9 +2,10 @@ import torch
 import tqdm
 import glob
 import os
-from scripts.default_config import get_default_config, display_config_diff
-from torchreid.utils import FeatureExtractor
 import numpy as np
+from scripts.default_config import get_default_config, display_config_diff
+from tools.feature_extractor import FeatureExtractor
+
 
 def extract_part_based_features(extractor, image_list, batch_size=400):
 
@@ -76,30 +77,3 @@ def extract_reid_features(cfg, base_folder, out_path, model=None, model_path=Non
         np.save(parts_masks_filename, results['parts_masks'])
 
         print("features saved to {}".format(out_path))
-
-
-if __name__ == '__main__':
-    project_root_torchreid = "/home/vso/projects/deep-person-reid"
-    project_root_strongsort = "/home/vso/projects/StrongSORT"
-    model_path = '/home/vso/log/bpbreid_market/2022_04_29_02_59_33_59S8be4228f-685e-4b62-bb99-53d8f43e105e/2022_04_29_02_59_33_59S8be4228f-685e-4b62-bb99-53d8f43e105emodel/model.pth.tar-120'
-
-    # project_root_torchreid= "/Users/vladimirsomers/Code/deep-person-reid"
-    # project_root_strongsort = "/Users/vladimirsomers/Code/MOT/StrongSORT"
-    # model_path = '/Users/vladimirsomers/Models/BPBReID/hrnet_jobid_8728_model.pth.tar-120'
-
-    config_name = "hrnet_jobid_8728_model"
-    base_folder = os.path.join(project_root_strongsort, "pregenerated_files/MOT17_val_YOLOX_crops_for_reid")
-    out_path = os.path.join(project_root_strongsort, "pregenerated_files/MOT17_val_YOLOX_features", config_name)
-    config_file_path = os.path.join(project_root_torchreid, "configs/bpbreid/remote_bpbreid_dukemtmc_train.yaml")
-
-    cfg = get_default_config()
-    cfg.data.parts_num = 5
-    cfg.use_gpu = torch.cuda.is_available()
-    default_cfg_copy = cfg.clone()
-    cfg.merge_from_file(config_file_path)
-    cfg.project.config_file = os.path.basename(config_file_path)
-    display_config_diff(cfg, default_cfg_copy)
-    cfg.model.pretrained = False
-    num_classes = 702  # for model trained on DukeMTMC
-
-    extract_reid_features(cfg, base_folder, out_path, model_path=model_path, num_classes=num_classes)

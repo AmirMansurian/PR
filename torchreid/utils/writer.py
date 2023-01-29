@@ -101,11 +101,11 @@ class Writer(EngineStateListener):
     def update_invalid_pairwise_distances_count(self, batch_pairwise_dist):
         self.invalid_pairwise_distances_count.update((batch_pairwise_dist == float(-1)).sum(), batch_pairwise_dist.nelement())
 
-    def update_invalid_body_part_pairwise_distances_count(self, valid_body_part_pairwise_dist_mask):
+    def update_invalid_part_based_pairwise_distances_count(self, valid_body_part_pairwise_dist_mask):
         self.uncomparable_body_parts_pairs_count.update((valid_body_part_pairwise_dist_mask.nelement() - valid_body_part_pairwise_dist_mask.sum()),
                                                         valid_body_part_pairwise_dist_mask.nelement())
 
-    def used_body_parts_statistics(self, M, body_part_id):
+    def used_parts_statistics(self, M, body_part_id):
         # count apparition of each body part id, remove diagonal as we don't consider pairs with same id
         used_body_parts_count = torch.bincount(body_part_id.flatten(), minlength=M) - torch.bincount(
             body_part_id.diag(), minlength=M)

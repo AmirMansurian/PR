@@ -43,7 +43,6 @@ def show_triplet_grid(triplets):
     #     ax.spines['bottom'].set_visible(ax.is_last_row())
     #     ax.spines['left'].set_visible(ax.is_first_col())
     #     ax.spines['right'].set_visible(ax.is_last_col())
-    # plt.savefig("/home/vso/experiments/triplets_{}.png".format(id)) # TODO fix
     Logger.current_logger().add_figure("Batch triplets", fig11, EngineState.current_engine_state().epoch)
     # plt.show()
     # plt.waitforbuttonpress()

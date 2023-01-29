@@ -30,7 +30,7 @@ WIDTH = 128
 HEIGHT = 256
 cmap = matplotlib.cm.get_cmap('hsv')
 
-
+# TODO document and make code easier to read and adapt, i.e. less intricate
 def visualize_ranking_grid(distmat, body_parts_distmat, test_loader, dataset_name, qf_parts_visibility, gf_parts_visibility, q_parts_masks, g_parts_masks, mAP, rank1, save_dir, topk, visrank_q_idx_list, visrank_count, config=None, bp_idx=None):
     num_q, num_g = distmat.shape
     query_dataset = test_loader['query'].dataset
@@ -75,7 +75,13 @@ def visualize_ranking_grid(distmat, body_parts_distmat, test_loader, dataset_nam
         for g_idx in indices[q_idx, :]:
             gallery = gallery_dataset[g_idx]
             gpid, gcamid, gimg_path = gallery['pid'], gallery['camid'], gallery['img_path']
-            invalid = (qpid == gpid) & (qcamid == gcamid) or distmat[q_idx, g_idx] < 0
+            invalid = test_loader['query'].dataset.gallery_filter(np.array(qpid),
+                                                                  np.array(qcamid),
+                                                                  None,
+                                                                  np.array(gpid),
+                                                                  np.array(gcamid),
+                                                                  None).item()
+            invalid = invalid or distmat[q_idx, g_idx] < 0
 
             if not invalid:
                 # matched = gpid == qpid
@@ -119,7 +125,7 @@ def show_ranking_grid(query_sample, gallery_topk_samples, mAP, rank1, dataset_na
 
 
     pos = (int(grid_img.shape[1]/2), 0)
-    filtering_str = "body part filtering with threshold {}".format(config.data.masks.mask_filtering_threshold) if config.model.bpbreid.mask_filtering_testing else "no body part filtering"
+    filtering_str = "body part filtering with threshold {}".format(config.model.bpbreid.masks.mask_filtering_threshold) if config.model.bpbreid.mask_filtering_testing else "no body part filtering"
     align_top_text(grid_img, "Ranking for dataset {}, {}, pid {}, mAP {:.2f}%, rank1 {:.2f}%, loss {}, {}".format(dataset_name, config.project.job_id, qpid, mAP * 100, rank1 * 100, config.loss.part_based.name, filtering_str), pos, 3.5, 7, 120)
 
     for row, sample in enumerate(samples):
@@ -235,7 +241,7 @@ def display_sample_on_row(grid_img, sample, row, img_shape, mask_filtering_flag,
                 thickness = 3 if body_parts_dist_to_query.argmax() == bp_idx or body_parts_dist_to_query.argmin() == bp_idx else 2
                 align_top_text(grid_img, "{}% | {:.2f}".format(int(perc(parts_visibility[bp_idx], 0)), body_parts_dist_to_query[bp_idx]), pos, 0.9, thickness, 10)
             mask = masks[bp_idx, :, :]
-            img_with_mask_overlay = mask_overlay(img, mask)
+            img_with_mask_overlay = mask_overlay(img, mask, interpolation=cv2.INTER_CUBIC)
             if mask_filtering_flag:
                 # match_color = GREEN if parts_visibility[bp_idx] else RED
                 match_color = cmap(parts_visibility[bp_idx].item()/3, bytes=True)[0:-1]  # divided by three because hsv colormap goes from red to green inside [0, 0.333]
@@ -246,16 +252,16 @@ def display_sample_on_row(grid_img, sample, row, img_shape, mask_filtering_flag,
         insert_img_into_grid(grid_img, img_to_insert, row, col)
 
 
-def mask_overlay(img, mask, clip=True):
+def mask_overlay(img, mask, clip=True, interpolation=cv2.INTER_NEAREST):
     width, height = img.shape[1], img.shape[0]
-    mask = cv2.resize(mask, dsize=(width, height), interpolation=cv2.INTER_NEAREST)
+    mask = cv2.resize(mask, dsize=(width, height), interpolation=interpolation)
     if clip:
         mask = np.clip(mask, 0, 1)
         mask = (mask * 255).astype(np.uint8)
     else:
         mask = np.interp(mask, (mask.min(), mask.max()), (0, 255)).astype(np.uint8)
     mask_color = cv2.applyColorMap(mask, cv2.COLORMAP_JET)
-    masked_img = cv2.addWeighted(img, 0.5, mask_color, 0.5, 0)
+    masked_img = cv2.addWeighted(img, 0.5, mask_color.astype(img.dtype), 0.5, 0)
     return masked_img
 
 

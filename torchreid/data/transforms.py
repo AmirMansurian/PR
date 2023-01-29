@@ -7,10 +7,9 @@ from albumentations import (
     Resize, Compose, Normalize, ColorJitter, HorizontalFlip, CoarseDropout, RandomCrop, PadIfNeeded
 )
 from albumentations.pytorch import ToTensorV2
-from torchreid.data.data_augmentation import masks_preprocess_all
-from torchreid.data.data_augmentation.mask_transform import AddBackgroundMask, ResizeMasks, RemoveBackgroundMask, \
-    PermuteMasksDim
-from torchreid.data.data_augmentation.random_occlusion import RandomOcclusion
+from torchreid.data.masks_transforms import masks_preprocess_all, AddBackgroundMask, ResizeMasks, PermuteMasksDim, \
+    RemoveBackgroundMask
+from torchreid.data.data_augmentation import RandomOcclusion
 
 
 class NpToTensor(object):

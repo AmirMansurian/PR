@@ -1,7 +1,4 @@
 from __future__ import division, print_function, absolute_import
-
-import time
-
 import numpy as np
 import warnings
 from collections import defaultdict
@@ -16,7 +13,6 @@ except ImportError:
         'unavailable, now use python evaluation.'
     )
 
-
 def eval_soccernetv3(distmat, q_pids, g_pids, q_action_indices, g_action_indices, max_rank):
     """Evaluation with market1501 metric
     """
@@ -30,6 +26,8 @@ def eval_soccernetv3(distmat, q_pids, g_pids, q_action_indices, g_action_indices
         )
 
     indices = np.argsort(distmat, axis=1)
+    #print(indices.shape)
+    #print(g_pids[indices].shape)
     matches = (g_pids[indices] == q_pids[:, np.newaxis]).astype(np.int32)
 
     # compute cmc curve for each query
@@ -50,14 +48,18 @@ def eval_soccernetv3(distmat, q_pids, g_pids, q_action_indices, g_action_indices
 
         # compute cmc curve
         raw_cmc = matches[q_idx][keep] # binary vector, positions with value 1 are correct matches
+
         if not np.any(raw_cmc):
             print("Does not appear in gallery: q_idx {} - q_pid {} - q_action_idx {}".format(q_idx, q_pid, q_action_idx))
             # this condition is true when query identity does not appear in gallery
             continue
 
         cmc = raw_cmc.cumsum()
+
         cmc[cmc > 1] = 1
         cmc = cmc[:max_rank]
+
+
         if smallest_ranking_size > cmc.size:
             smallest_ranking_size = cmc.size
 
@@ -229,162 +231,16 @@ def eval_market1501(distmat, q_pids, g_pids, q_camids, g_camids, max_rank):
     }
 
 
-def eval_motchallenge(distmat, q_pids, g_pids, q_camids, g_camids, max_rank, q_anns, g_anns):
-    """Evaluation with market1501 metric
-    Key: for each query identity, its gallery images from the same camera view are discarded.
-    """
-    num_q, num_g = distmat.shape
-
-    if num_g < max_rank:
-        max_rank = num_g
-        print(
-            'Note: number of gallery samples is quite small, got {}'.
-            format(num_g)
-        )
-
-    indices = np.argsort(distmat, axis=1)
-    matches = (g_pids[indices] == q_pids[:, np.newaxis]).astype(np.int32)
-
-    # compute cmc curve for each query
-    all_cmc = []
-    all_AP = []
-    num_valid_q = 0. # number of valid query
-
-    for q_idx in range(num_q):
-        # get query pid and camid
-        q_pid = q_pids[q_idx]
-        q_camid = q_camids[q_idx]
-
-        # remove gallery samples that have the same pid and camid with query
-        order = indices[q_idx]
-        remove = (g_pids[order] == q_pid) & (g_camids[order] == q_camid)
-        keep = np.invert(remove)
-
-        # compute cmc curve
-        raw_cmc = matches[q_idx][
-            keep] # binary vector, positions with value 1 are correct matches
-        if not np.any(raw_cmc):
-            # this condition is true when query identity does not appear in gallery
-            continue
-
-        cmc = raw_cmc.cumsum()
-        cmc[cmc > 1] = 1
-
-        all_cmc.append(cmc[:max_rank])
-        num_valid_q += 1.
-
-        # compute average precision
-        # reference: https://en.wikipedia.org/wiki/Evaluation_measures_(information_retrieval)#Average_precision
-        num_rel = raw_cmc.sum()
-        tmp_cmc = raw_cmc.cumsum()
-        tmp_cmc = [x / (i+1.) for i, x in enumerate(tmp_cmc)]
-        tmp_cmc = np.asarray(tmp_cmc) * raw_cmc
-        AP = tmp_cmc.sum() / num_rel
-        all_AP.append(AP)
-
-    assert num_valid_q > 0, 'Error: all query identities do not appear in gallery'
-
-    all_cmc = np.asarray(all_cmc).astype(np.float32)
-    cmc = all_cmc.sum(0) / num_valid_q
-    all_AP = np.array(all_AP)
-    mAP = np.mean(all_AP)
-
-    sample_visibility_scores = q_anns['vis']
-    low_vis = sample_visibility_scores <= 0.25
-    medium_vis = np.logical_and(sample_visibility_scores >= 0.25, sample_visibility_scores <= 0.75)
-    high_vis = sample_visibility_scores >= 0.75
-
-    low_vis_mAP = np.mean(all_AP[low_vis]) if np.any(low_vis) else None
-    medium_vis_mAP = np.mean(all_AP[medium_vis]) if np.any(medium_vis) else None
-    high_vis_mAP = np.mean(all_AP[high_vis]) if np.any(high_vis) else None
-
-    low_vis_cmc = all_cmc[low_vis].sum(0) / low_vis.sum() if np.any(low_vis) else None
-    medium_vis_cmc = all_cmc[medium_vis].sum(0) / medium_vis.sum() if np.any(medium_vis) else None
-    high_vis_cmc = all_cmc[high_vis].sum(0) / high_vis.sum() if np.any(high_vis) else None
-
-    return {
-        'cmc': cmc,
-        'mAP': mAP,
-        'Low visibility mAP': (low_vis_mAP, low_vis.sum()),
-        'Medium visibility mAP': (medium_vis_mAP, medium_vis.sum()),
-        'High visibility mAP': (high_vis_mAP, high_vis.sum()),
-        'Low visibility rank-1': (low_vis_cmc[0] if low_vis_cmc is not None else None, low_vis.sum()),
-        'Medium visibility rank-1': (medium_vis_cmc[0] if medium_vis_cmc is not None else None, medium_vis.sum()),
-        'High visibility rank-1': (high_vis_cmc[0] if high_vis_cmc is not None else None, high_vis.sum()),
-    }
-
-
-def eval_dartfish(distmat, q_pids, g_pids, q_camids, g_camids, max_rank):
-    """Evaluation with market1501 metric, but for each query identity,
-    all gallery images are used.
-    """
-    num_q, num_g = distmat.shape
-
-    if num_g < max_rank:
-        max_rank = num_g
-        print(
-            'Note: number of gallery samples is quite small, got {}'.
-                format(num_g)
-        )
-
-    indices = np.argsort(distmat, axis=1)
-    matches = (g_pids[indices] == q_pids[:, np.newaxis]).astype(np.int32)
-
-    # compute cmc curve for each query
-    all_cmc = []
-    all_AP = []
-    num_valid_q = 0.  # number of valid query
-
-    for q_idx in range(num_q):
-        # compute cmc curve
-        raw_cmc = matches[q_idx]  # binary vector, positions with value 1 are correct matches
-        if not np.any(raw_cmc):
-            # this condition is true when query identity does not appear in gallery
-            continue
-
-        cmc = raw_cmc.cumsum()
-        cmc[cmc > 1] = 1
-
-        all_cmc.append(cmc[:max_rank])
-        num_valid_q += 1.
-
-        # compute average precision
-        # reference: https://en.wikipedia.org/wiki/Evaluation_measures_(information_retrieval)#Average_precision
-        num_rel = raw_cmc.sum()
-        tmp_cmc = raw_cmc.cumsum()
-        tmp_cmc = [x / (i + 1.) for i, x in enumerate(tmp_cmc)]
-        tmp_cmc = np.asarray(tmp_cmc) * raw_cmc
-        AP = tmp_cmc.sum() / num_rel
-        all_AP.append(AP)
-
-    assert num_valid_q > 0, 'Error: all query identities do not appear in gallery'
-
-    all_cmc = np.asarray(all_cmc).astype(np.float32)
-    cmc = all_cmc.sum(0) / num_valid_q
-    mAP = np.mean(all_AP)
-
-    return {
-        'cmc': cmc,
-        'mAP': mAP,
-    }
-
-
 def evaluate_py(
     distmat, q_pids, g_pids, q_camids, g_camids, max_rank, eval_metric, q_anns=None, g_anns=None,
 ):
-    #if eval_metric == 'default':
-       # return eval_market1501(distmat, q_pids, g_pids, q_camids, g_camids, max_rank)
-
     if eval_metric == 'default':
+        #return eval_market1501(distmat, q_pids, g_pids, q_camids, g_camids, max_rank)
         return eval_soccernetv3(distmat, q_pids, g_pids, q_camids, g_camids, max_rank)
     elif eval_metric == 'cuhk03':
         return eval_cuhk03(distmat, q_pids, g_pids, q_camids, g_camids, max_rank)
     elif eval_metric == 'soccernetv3':
         return eval_soccernetv3(distmat, q_pids, g_pids, q_camids, g_camids, max_rank)
-    elif eval_metric == 'dartfish':
-        return eval_dartfish(distmat, q_pids, g_pids, q_camids, g_camids, max_rank)
-    elif eval_metric == 'motchallenge':
-        return eval_motchallenge(distmat, q_pids, g_pids, q_camids, g_camids, max_rank, q_anns, g_anns)
     else:
         raise ValueError("Incorrect eval_metric value '{}'".format(eval_metric))
 

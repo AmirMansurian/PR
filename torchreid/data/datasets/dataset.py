@@ -29,21 +29,18 @@ class Dataset(object):
     _junk_pids = [
     ] # contains useless person IDs, e.g. background, false detections
 
-    images_dir = None
     masks_base_dir = None
-    external_annotation_base_dir = None
     eval_metric = 'default'  # default to market101
+
+    def gallery_filter(self, q_pid, q_camid, q_ann, g_pids, g_camids, g_anns):
+        """ Remove gallery samples that have the same pid and camid as the query sample, since ReID is a cross-camera
+        person retrieval task for most datasets. However, we still keep samples from the same camera but of different
+        identity as distractors."""
+        remove = (g_camids == q_camid) & (g_pids == q_pid)
+        return remove
 
     def infer_masks_path(self, img_path):
         masks_path = os.path.join(self.dataset_dir, self.masks_base_dir, self.masks_dir, os.path.basename(os.path.dirname(img_path)), os.path.splitext(os.path.basename(img_path))[0] + self.masks_suffix)
-        return masks_path
-
-    def infer_keypoints_path(self, img_path):
-        masks_path = os.path.join(self.dataset_dir, self.external_annotation_base_dir, self.keypoints_dir, os.path.basename(os.path.dirname(img_path)), os.path.basename(img_path) + self.keypoints_suffix)
-        return masks_path
-
-    def infer_segmentation_path(self, img_path):
-        masks_path = os.path.join(self.dataset_dir, self.external_annotation_base_dir, self.segmentation_dir, os.path.basename(os.path.dirname(img_path)), os.path.basename(img_path) + self.segmentation_suffix)
         return masks_path
 
     def __init__(
@@ -52,7 +49,8 @@ class Dataset(object):
         query,
         gallery,
         config=None,
-        transform=None,
+        transform_tr=None,
+        transform_te=None,
         mode='train',
         combineall=False,
         verbose=True,
@@ -65,7 +63,8 @@ class Dataset(object):
         self.train = train
         self.query = query
         self.gallery = gallery
-        self.transform = transform
+        self.transform_tr = transform_tr
+        self.transform_te = transform_te
         self.cfg = config
         self.mode = mode
         self.combineall = combineall
@@ -82,26 +81,48 @@ class Dataset(object):
         if self.combineall:
             self.combine_all()
 
-        if self.mode == 'train':
-            self.data = self.train
-        elif self.mode == 'query':
-            self.data = self.query
-        elif self.mode == 'gallery':
-            self.data = self.gallery
-        else:
-            raise ValueError(
-                'Invalid mode. Got {}, but expected to be '
-                'one of [train | query | gallery]'.format(self.mode)
-            )
-
         if self.verbose:
             self.show_summary()
+
+    def transforms(self, mode):
+        """Returns the transforms of a specific mode."""
+        if mode == 'train':
+            return self.transform_tr
+        elif mode == 'query':
+            return self.transform_te
+        elif mode == 'gallery':
+            return self.transform_te
+        else:
+            raise ValueError("Invalid mode. Got {}, but expected to be "
+                             "'train', 'query' or 'gallery'".format(mode))
+
+    def data(self, mode):
+        """Returns the data of a specific mode.
+
+        Args:
+            mode (str): 'train', 'query' or 'gallery'.
+
+        Returns:
+            list: contains tuples of (img_path(s), pid, camid).
+        """
+        if mode == 'train':
+            return self.train
+        elif mode == 'query':
+            return self.query
+        elif mode == 'gallery':
+            return self.gallery
+        else:
+            raise ValueError("Invalid mode. Got {}, but expected to be "
+                             "'train', 'query' or 'gallery'".format(mode))
 
     def __getitem__(self, index):
         raise NotImplementedError
 
-    def __len__(self):
-        return len(self.data)
+    def __len__(self):  # kept for backward compatibility
+        return self.len(self.mode)
+
+    def len(self, mode):
+        return len(self.data(mode))
 
     def __add__(self, other):
         """Adds two datasets together (only the train set)."""
@@ -298,11 +319,14 @@ class ImageDataset(Dataset):
     def __init__(self, train, query, gallery, **kwargs):
         super(ImageDataset, self).__init__(train, query, gallery, **kwargs)
 
-    def __getitem__(self, index): # ALL of this should be handled at the dataset level?
+    def __getitem__(self, index):  # kept for backward compatibility
+        return self.getitem(index, self.mode)
+
+    def getitem(self, index, mode):
         # BPBreID can work with None masks
         # list all combination: source vs target, merged/joined vs not, cross domain or not, load from disk vs fixed for BoT/PBP transform vs None,
         # need masks when available for pixel accuracy prediction
-        sample = self.data[index]
+        sample = self.data(mode)[index]
         transf_args = {"image": read_image(sample['img_path'])}
         if self.use_masks:
             if self.load_masks and 'masks_path' in sample:
@@ -313,7 +337,7 @@ class ImageDataset(Dataset):
                 transf_args["mask"] = np.ones((1, 2, 2))
             else:
                 pass
-        result = self.transform(**transf_args)
+        result = self.transforms(mode)(**transf_args)
         sample.update(result)
         return sample
 
@@ -371,8 +395,8 @@ class VideoDataset(Dataset):
         if self.transform is None:
             raise RuntimeError('transform must not be None')
 
-    def __getitem__(self, index):
-        img_paths, pid, camid = self.data[index]  # FIXME new format
+    def getitem(self, index, mode):
+        img_paths, pid, camid = self.data(mode)[index]  # FIXME new format
         num_imgs = len(img_paths)
 
         if self.sample_method == 'random':

@@ -84,13 +84,13 @@ __video_datasets = {
     'dukemtmcvidreid': DukeMTMCVidReID
 }
 
+
 def get_dataset_nickname(name):
     return __datasets_nicknames.get(name, name)
 
 
 def get_image_dataset(name):
     avai_datasets = list(__image_datasets.keys())
-    import time
     if name not in avai_datasets:
         raise ValueError(
             'Invalid dataset name. Received "{}", '
@@ -123,7 +123,7 @@ def register_image_dataset(name, dataset):
         dataset (Dataset): the new dataset class.
 
     Examples::
-        
+
         import torchreid
         import NewDataset
         torchreid.data.register_image_dataset('new_dataset', NewDataset)
@@ -156,7 +156,7 @@ def register_video_dataset(name, dataset):
         dataset (Dataset): the new dataset class.
 
     Examples::
-        
+
         import torchreid
         import NewDataset
         torchreid.data.register_video_dataset('new_dataset', NewDataset)

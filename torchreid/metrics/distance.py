@@ -85,13 +85,17 @@ def cosine_distance(input1, input2):
 
 
 def compute_distance_matrix_using_bp_features(qf, gf, qf_parts_visibility=None, gf_parts_visibility=None, dist_combine_strat='mean', batch_size_pairwise_dist_matrix=5000, use_gpu=False, metric='euclidean'):
+    """Computes distance matrix between each pair of samples using their part-based features. 3 implementations here: without visibility scores, with boolean/binary visibility scores and with continuous [0, 1] visibility scores."""
     # TODO keep only one generic implementation
     if qf_parts_visibility is not None and gf_parts_visibility is not None:
         if qf_parts_visibility.dtype is torch.bool and gf_parts_visibility.dtype is torch.bool:
+            # boolean visibility scores
             return _compute_distance_matrix_using_bp_features_and_masks(qf, gf, qf_parts_visibility, gf_parts_visibility, dist_combine_strat, batch_size_pairwise_dist_matrix, use_gpu, metric)
         else:
+            # continuous visibility scores
             return _compute_distance_matrix_using_bp_features_and_visibility_scores(qf, gf, qf_parts_visibility, gf_parts_visibility, dist_combine_strat, batch_size_pairwise_dist_matrix, use_gpu, metric)
     else:
+        # no visibility scores
         return _compute_distance_matrix_using_bp_features(qf, gf, dist_combine_strat, batch_size_pairwise_dist_matrix, use_gpu, metric)
 
 
@@ -203,7 +207,8 @@ def _compute_distance_matrix_using_bp_features_and_visibility_scores(qf, gf, qf_
     body_part_pairwise_dist = torch.cat(body_part_pairwise_dist_, 2)
 
     # TODO check if still valid:
-    Writer.current_writer().qg_pairwise_dist_statistics(pairwise_dist, body_part_pairwise_dist, qf_parts_visibility_cpu, gf_parts_visibility)
+    if Writer.current_writer() is not None:
+        Writer.current_writer().qg_pairwise_dist_statistics(pairwise_dist, body_part_pairwise_dist, qf_parts_visibility_cpu, gf_parts_visibility)
 
     max_value = body_part_pairwise_dist.max() + 1
     valid_pairwise_dist_mask = (pairwise_dist != float(-1))

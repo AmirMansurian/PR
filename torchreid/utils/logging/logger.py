@@ -1,11 +1,13 @@
 import os
-from typing import Optional
+import cv2
 import neptune
+import wandb
+import matplotlib.pyplot as plt
+from typing import Optional
 from pandas.io.json._normalize import nested_to_record
 from torch.utils.tensorboard import SummaryWriter
 from clearml import Task
-import wandb
-import matplotlib.pyplot as plt
+
 
 class Logger:
     """ A class to encapsulate external loggers such as Tensorboard, Allegro ClearML, Neptune, Weight and Biases, 
@@ -23,6 +25,8 @@ class Logger:
         # self.model_name = cfg.project.start_time + cfg.project.experiment_id
 
         # configs
+        self.save_disk = cfg.project.logger.save_disk
+        self.save_dir = cfg.data.save_dir
         self.matplotlib_show = cfg.project.logger.matplotlib_show
 
         # init external loggers
@@ -50,8 +54,11 @@ class Logger:
 
         self.use_neptune = cfg.project.logger.use_neptune
         if self.use_neptune:
-            neptune.init(project_qualified_name='vlsomers/{}'.format(cfg.project.name),
-                         api_token='eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiNmRkM2JiZTItMjNjMC00OWYzLTljYzgtY2ZiOGU3YjdlZWY2In0=',
+            project_qualified_name = None
+            api_token = None
+            assert api_token is not None or project_qualified_name is not None, "You must provide either api_token or project_qualified_name"
+            neptune.init(project_qualified_name=project_qualified_name.format(cfg.project.name),
+                         api_token=api_token,
                          )
             # Create experiment
             neptune.create_experiment(params=nested_to_record(cfg, sep='.'))
@@ -75,11 +82,11 @@ class Logger:
         Logger.__main_logger = self
 
     def add_model(self, model):
-        if self.use_wandb:
+        if self.use_wandb and wandb.run is not None:
             wandb.watch(model)
 
     def add_text(self, tag, value):
-        if self.use_wandb:
+        if self.use_wandb and wandb.run is not None:
             wandb.log({tag: value})
         if self.use_neptune:
             neptune.log_text(tag, 0, value)
@@ -87,7 +94,7 @@ class Logger:
     def add_scalar(self, tag, scalar_value, step):
         if self.tensorboard_logger is not None:
             self.tensorboard_logger.add_scalar(tag, scalar_value, step)
-        if self.use_wandb:
+        if self.use_wandb and wandb.run is not None:
             wandb.log({tag: scalar_value})
         if self.use_neptune:
             neptune.log_metric(tag, x=step, y=scalar_value)
@@ -107,15 +114,20 @@ class Logger:
                 figure=figure,
                 report_image=False
             )
-        if self.use_wandb:
+        if self.use_wandb and wandb.run is not None:
             wandb.log({tag: wandb.Image(
                 figure)})  # FIXME cannot give "figure" directly: Invalid value of type 'builtins.str' received for the 'color' property of scatter.marker Received value: 'none'
         if self.use_neptune:
             neptune.log_image(tag, figure)
             # neptunecontrib.api.log_chart(tag, figure) # FIXME Invalid value of type 'builtins.str' received for the 'color' property of scatter.marker Received value: 'none'
+        if self.save_disk:
+            figure_path = os.path.join(self.save_dir, 'figures', tag + '.png')
+            os.makedirs(os.path.dirname(figure_path), exist_ok=True)
+            plt.savefig(figure_path)
         plt.close(figure)
 
     def add_image(self, group, name, image, step):
+        """Input image must be in RGB format"""
         # if self.tensorboard_logger is not None:
         #     self.tensorboard_logger.add_figure(tag, figure, self.global_step())
         if self.allegro_clearml_task is not None:
@@ -131,10 +143,15 @@ class Logger:
                 # url=None
             )
 
-        if self.use_wandb:
+        if self.use_wandb and wandb.run is not None:
             wandb.log({group + name: wandb.Image(image)})
         if self.use_neptune:
             neptune.log_image(group + name, image)
+        if self.save_disk:
+            image_path = os.path.join(self.save_dir, 'images', f"{group}_{name}.jpg")
+            os.makedirs(os.path.dirname(image_path), exist_ok=True)
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(image_path, image)
 
     def add_embeddings(self, tag, embeddings, labels, imgs, step):
         if self.tensorboard_logger is not None:
@@ -151,5 +168,5 @@ class Logger:
             if self.allegro_clearml_task is not None:
                 self.allegro_clearml_task.upload_artifact('Tensorboard folder', artifact_object=self.tensorboard_folder)
                 self.allegro_clearml_task.close()
-        if self.use_wandb:
+        if self.use_wandb and wandb.run is not None:
             wandb.finish()

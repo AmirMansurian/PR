@@ -1,15 +1,13 @@
 import os
-from time import sleep
 import argparse
 import torch
 import torch.nn as nn
 import torchreid
 from tools.extract_part_based_features import extract_reid_features
-from torchreid.data.data_augmentation import masks_preprocess_all
-from torchreid.data.datasets import get_image_dataset
+from torchreid.data.masks_transforms import compute_parts_num_and_names
 from torchreid.utils import (
     Logger, check_isfile, set_random_seed, collect_env_info,
-    resume_from_checkpoint, load_pretrained_weights, compute_model_complexity, Writer
+    resume_from_checkpoint, load_pretrained_weights, compute_model_complexity, Writer, load_checkpoint
 )
 
 from scripts.default_config import (
@@ -177,52 +175,74 @@ def main():
     parser.add_argument(
         '--epoch', type=int, default=5, help='number of epochs'
     )
-
     args = parser.parse_args()
 
+    cfg = build_config(args, args.config_file)
+    cfg.data.save_dir = '../'
+
+    engine, model = build_torchreid_model_engine(cfg)
+    print('Starting experiment {} with job id {} and creation date {}'.format(cfg.project.experiment_id,
+                                                                              cfg.project.job_id,
+                                                                              cfg.project.start_time))
+    engine.run(**engine_run_kwargs(cfg))
+    print(
+        'End of experiment {} with job id {} and creation date {}'.format(cfg.project.experiment_id, cfg.project.job_id,
+                                                                          cfg.project.start_time))
+    if cfg.inference.enabled:
+        print("Starting inference on external data")
+        extract_reid_features(cfg, cfg.inference.input_folder, cfg.data.save_dir, model)
+
+
+def build_config(args=None, config_file=None):
     cfg = get_default_config()
-    cfg.use_gpu = torch.cuda.is_available()
     default_cfg_copy = cfg.clone()
-    if args.config_file:
-        cfg.merge_from_file(args.config_file)
-        cfg.project.config_file = os.path.basename(args.config_file)
-    reset_config(cfg, args)
-    cfg.merge_from_list(args.opts)
+    cfg.use_gpu = torch.cuda.is_available()
+    if config_file:
+        cfg.merge_from_file(config_file)
+        cfg.project.config_file = os.path.basename(config_file)
+    if args is not None:
+        reset_config(cfg, args)
+        cfg.merge_from_list(args.opts)
 
     ################################
     cfg.train.max_epoch = args.epoch
     ################################
-
     # set parts information (number of parts K and each part name),
     # depending on the original loaded masks size or the transformation applied:
     compute_parts_num_and_names(cfg)
+    if cfg.model.load_weights and check_isfile(cfg.model.load_weights) and cfg.model.load_config:
+        checkpoint = load_checkpoint(cfg.model.load_weights)
+        if 'config' in checkpoint:
+            print('Overwriting current config with config loaded from {}'.format(cfg.model.load_weights))
+            bpbreid_config = checkpoint['config'].model.bpbreid
+            if checkpoint['config'].data.sources[0] != cfg.data.targets[0]:
+                print('WARNING: the train dataset of the loaded model is different from the target dataset in the '
+                      'current config.')
+            bpbreid_config.pop('hrnet_pretrained_path', None)
+            bpbreid_config.masks.pop('dir', None)
+            cfg.model.bpbreid.merge_from_other_cfg(bpbreid_config)
+        else:
+            print('Could not load config from file {}'.format(cfg.model.load_weights))
     display_config_diff(cfg, default_cfg_copy)
-
-    #print(os.path.join(cfg.data.save_dir, str(cfg.project.job_id)))
-
-
     cfg.data.save_dir = os.path.join(cfg.data.save_dir, str(cfg.project.job_id))
     os.makedirs(cfg.data.save_dir)
+    return cfg
 
+
+def build_torchreid_model_engine(cfg):
     if cfg.project.debug_mode:
         torch.autograd.set_detect_anomaly(True)
-
     logger = Logger(cfg)
     writer = Writer(cfg)
-
     set_random_seed(cfg.train.seed)
-
     print('Show configuration\n{}\n'.format(cfg))
     print('Collecting env info ...')
     print('** System info **\n{}\n'.format(collect_env_info()))
-
     if cfg.use_gpu:
         torch.backends.cudnn.benchmark = True
-
     datamanager = build_datamanager(cfg)
     engine_state = EngineState(cfg.train.start_epoch, cfg.train.max_epoch)
-    writer.init_engine_state(engine_state, cfg.data.parts_num)
-
+    writer.init_engine_state(engine_state, cfg.model.bpbreid.masks.parts_num)
     print('Building model: {}'.format(cfg.model.name))
     model = torchreid.models.build_model(
         name=cfg.model.name,
@@ -232,54 +252,28 @@ def main():
         use_gpu=cfg.use_gpu,
         config=cfg
     )
-
     logger.add_model(model)
-
     num_params, flops = compute_model_complexity(
         model, cfg
     )
     print('Model complexity: params={:,} flops={:,}'.format(num_params, flops))
-
     if cfg.model.load_weights and check_isfile(cfg.model.load_weights):
         load_pretrained_weights(model, cfg.model.load_weights)
-
     if cfg.use_gpu:
         model = nn.DataParallel(model).cuda()
-
     optimizer = torchreid.optim.build_optimizer(model, **optimizer_kwargs(cfg))
     scheduler = torchreid.optim.build_lr_scheduler(
         optimizer, **lr_scheduler_kwargs(cfg)
     )
-
     if cfg.model.resume and check_isfile(cfg.model.resume):
         cfg.train.start_epoch = resume_from_checkpoint(
             cfg.model.resume, model, optimizer=optimizer, scheduler=scheduler
         )
-
     print(
         'Building {}-engine for {}-reid'.format(cfg.loss.name, cfg.data.type)
     )
     engine = build_engine(cfg, datamanager, model, optimizer, scheduler, writer, engine_state)
-    print('Starting experiment {} with job id {} and creation date {}'.format(cfg.project.experiment_id, cfg.project.job_id, cfg.project.start_time))
-    engine.run(**engine_run_kwargs(cfg))
-    print('End of experiment {} with job id {} and creation date {}'.format(cfg.project.experiment_id, cfg.project.job_id, cfg.project.start_time))
-
-    if cfg.inference.enabled:
-        print("Starting inference on external data")
-        extract_reid_features(cfg, cfg.inference.input_folder, cfg.data.save_dir, model)
-
-
-def compute_parts_num_and_names(cfg):
-    mask_config = get_image_dataset(cfg.data.sources[0]).get_masks_config(cfg.data.masks_dir)
-    if cfg.loss.name == 'part_based':
-        if (mask_config is not None and mask_config[1]) or cfg.data.masks.preprocess == 'none':
-            # ISP masks or no transform
-            cfg.data.parts_num = mask_config[0]
-            cfg.data.parts_names = mask_config[3]
-        else:
-            masks_transform = masks_preprocess_all[cfg.data.masks.preprocess]
-            cfg.data.parts_num = masks_transform.parts_num
-            cfg.data.parts_names = masks_transform.parts_names
+    return engine, model
 
 
 if __name__ == '__main__':

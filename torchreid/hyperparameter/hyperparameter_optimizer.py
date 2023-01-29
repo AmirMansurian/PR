@@ -40,7 +40,7 @@ an_optimizer = HyperParameterOptimizer(
     base_task_id=args['template_task_id'],
     # here we define the hyper-parameters to optimize
     hyper_parameters=[
-        DiscreteParameterRange('General/loss/part_based/name', ['inter_parts_triplet_loss', 'part_based_triplet_loss_max', 'part_based_triplet_loss_mean', 'intra_parts_triplet_loss']),
+        DiscreteParameterRange('General/loss/part_based/name', ['inter_parts_triplet_loss', 'part_max_triplet_loss', 'part_averaged_triplet_loss', 'intra_parts_triplet_loss']),
         DiscreteParameterRange('General/train/batch_size', values=[32, 128])
     ],
     # this is the objective metric we want to maximize/minimize

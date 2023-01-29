@@ -1,7 +1,7 @@
 from __future__ import division, print_function, absolute_import
 import torch
 
-from torchreid.data.data_augmentation import masks_preprocess_transforms
+from torchreid.data.masks_transforms import masks_preprocess_transforms
 from torchreid.data.sampler import build_train_sampler
 from torchreid.data.datasets import init_image_dataset, init_video_dataset, get_image_dataset
 from torchreid.data.transforms import build_transforms
@@ -65,10 +65,10 @@ class DataManager(object):
             norm_mean=norm_mean,
             norm_std=norm_std,
             remove_background_mask=masks_config[1] if masks_config is not None else False,
-            masks_preprocess=config.data.masks.preprocess,
-            softmax_weight=config.data.masks.softmax_weight,
-            background_computation_strategy=config.data.masks.background_computation_strategy,
-            mask_filtering_threshold=config.data.masks.mask_filtering_threshold,
+            masks_preprocess=config.model.bpbreid.masks.preprocess,
+            softmax_weight=config.model.bpbreid.masks.softmax_weight,
+            background_computation_strategy=config.model.bpbreid.masks.background_computation_strategy,
+            mask_filtering_threshold=config.model.bpbreid.masks.mask_filtering_threshold,
         )
 
         self.use_gpu = (torch.cuda.is_available() and use_gpu)
@@ -200,12 +200,12 @@ class ImageDataManager(DataManager):
 
         print('=> Loading train (source) dataset')
         trainset = []
-
         for name in self.sources:
             trainset_ = init_image_dataset(
                 name,
                 config=config,
-                transform=self.transform_tr,
+                transform_tr=self.transform_tr,
+                transform_te=self.transform_te,
                 mode='train',
                 combineall=combineall,
                 root=root,
@@ -215,7 +215,7 @@ class ImageDataManager(DataManager):
                 market1501_500k=market1501_500k,
                 use_masks=use_masks,
                 masks_dir=masks_dir,
-                load_masks=self.config.data.masks.preprocess in masks_preprocess_transforms,
+                load_masks=self.config.model.bpbreid.masks.preprocess in masks_preprocess_transforms,
             )
             trainset.append(trainset_)
         trainset = sum(trainset)
@@ -250,7 +250,8 @@ class ImageDataManager(DataManager):
                 trainset_t_ = init_image_dataset(
                     name,
                     config=config,
-                    transform=self.transform_tr,
+                    transform_tr=self.transform_tr,
+                    transform_te=self.transform_te,
                     mode='train',
                     combineall=False, # only use the training data
                     root=root,
@@ -260,7 +261,7 @@ class ImageDataManager(DataManager):
                     market1501_500k=market1501_500k,
                     use_masks=use_masks,
                     masks_dir=masks_dir,
-                    load_masks=self.config.data.masks.preprocess in masks_preprocess_transforms,
+                    load_masks=self.config.model.bpbreid.masks.preprocess in masks_preprocess_transforms,
                 )
                 trainset_t.append(trainset_t_)
             trainset_t = sum(trainset_t)
@@ -301,7 +302,8 @@ class ImageDataManager(DataManager):
             queryset = init_image_dataset(
                 name,
                 config=config,
-                transform=self.transform_te,
+                transform_tr=self.transform_tr,
+                transform_te=self.transform_te,
                 mode='query',
                 combineall=combineall,
                 root=root,
@@ -311,7 +313,7 @@ class ImageDataManager(DataManager):
                 market1501_500k=market1501_500k,
                 use_masks=use_masks,
                 masks_dir=masks_dir,
-                load_masks=self.config.data.masks.preprocess in masks_preprocess_transforms,
+                load_masks=self.config.model.bpbreid.masks.preprocess in masks_preprocess_transforms,
             )
             self.test_loader[name]['query'] = torch.utils.data.DataLoader(
                 queryset,
@@ -326,7 +328,8 @@ class ImageDataManager(DataManager):
             galleryset = init_image_dataset(
                 name,
                 config=config,
-                transform=self.transform_te,
+                transform_tr=self.transform_tr,
+                transform_te=self.transform_te,
                 mode='gallery',
                 combineall=combineall,
                 verbose=False,
@@ -337,7 +340,7 @@ class ImageDataManager(DataManager):
                 market1501_500k=market1501_500k,
                 use_masks=use_masks,
                 masks_dir=masks_dir,
-                load_masks=self.config.data.masks.preprocess in masks_preprocess_transforms,
+                load_masks=self.config.model.bpbreid.masks.preprocess in masks_preprocess_transforms,
             )
             self.test_loader[name]['gallery'] = torch.utils.data.DataLoader(
                 galleryset,

@@ -59,8 +59,7 @@ class VideoTripletEngine(ImageTripletEngine, VideoSoftmaxEngine):
         )
         engine.run(
             max_epoch=60,
-            save_dir='log/resnet50-triplet-mars',
-            print_freq=10
+            save_dir='log/resnet50-triplet-mars'
         )
     """
 

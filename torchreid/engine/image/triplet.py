@@ -54,8 +54,7 @@ class ImageTripletEngine(Engine):
         )
         engine.run(
             max_epoch=60,
-            save_dir='log/resnet50-triplet-market1501',
-            print_freq=10
+            save_dir='log/resnet50-triplet-market1501'
         )
     """
 
@@ -86,8 +85,6 @@ class ImageTripletEngine(Engine):
 
         self.criterion_t = TripletLoss(margin=margin)
         self.criterion_x = CrossEntropyLoss(
-            num_classes=self.datamanager.num_train_pids,
-            use_gpu=self.use_gpu,
             label_smooth=label_smooth
         )
 

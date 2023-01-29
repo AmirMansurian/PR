@@ -136,7 +136,6 @@ Get started: 30 seconds to Torchreid
         save_dir='log/resnet50',
         max_epoch=60,
         eval_freq=10,
-        print_freq=10,
         test_only=False
     )
 

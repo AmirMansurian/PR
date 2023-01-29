@@ -12,7 +12,7 @@ class RandomIdentitySampler(Sampler):
     """Randomly samples N identities each with K instances.
 
     Args:
-        data_source (list): contains tuples of (img_path(s), pid, camid).
+        data_source (list): contains tuples of (img_path(s), pid, camid).7
         batch_size (int): batch size.
         num_instances (int): number of instances per identity in a batch.
     """
@@ -76,6 +76,93 @@ class RandomIdentitySampler(Sampler):
         return self.length
 
 
+class RandomIdentityAndTeamSampler(Sampler):
+    """Randomly samples N identities each with K instances.
+
+    Args:
+        data_source (list): contains tuples of (img_path(s), pid, camid).
+        batch_size (int): batch size.
+        num_instances (int): number of instances per identity in a batch.
+    """
+
+    def __init__(self, data_source, batch_size, num_instances, num_teams):
+        if batch_size < num_instances:
+            raise ValueError(
+                'batch_size={} must be no less '
+                'than num_instances={}'.format(batch_size, num_instances)
+            )
+
+        self.data_source = data_source
+        self.batch_size = batch_size
+        self.num_instances = num_instances
+        self.num_teams = num_teams
+        self.num_pids_per_batch = self.batch_size // self.num_instances
+        self.num_pids_per_team = self.num_pids_per_batch // self.num_teams
+        self.index_dic = defaultdict(list)
+        self.team_dic = {}
+
+        for index, sample in enumerate(self.data_source):
+            self.index_dic[sample['pid']].append(index)
+            if sample['team_id'] not in self.team_dic.keys():
+                self.team_dic[sample['team_id']] = defaultdict(list)
+            self.team_dic[sample['team_id']][sample['pid']].append(index)
+
+        self.pids = list(self.index_dic.keys())
+        self.team_ids = list(self.team_dic.keys())
+
+        # estimate number of examples in an epoch
+        self.length = 0
+        for pid in self.pids:
+            idxs = self.index_dic[pid]
+            num = len(idxs)
+            if num < self.num_instances:
+                num = self.num_instances
+            self.length += num - num % self.num_instances
+
+    def __iter__(self):
+        batch_idxs_dict = {}
+
+        for team in self.team_ids:
+            batch_idxs_dict[team] = defaultdict(list)
+
+            for pid in self.team_dic[team].keys():
+                idxs = copy.deepcopy(self.index_dic[pid])
+                if len(idxs) < self.num_instances:
+                    idxs = np.random.choice(
+                        idxs, size=self.num_instances, replace=True
+                    )
+                random.shuffle(idxs)
+                batch_idxs = []
+                for idx in idxs:
+                    batch_idxs.append(idx)
+                    if len(batch_idxs) == self.num_instances:
+                        batch_idxs_dict[team][pid].append(batch_idxs)
+                        batch_idxs = []
+
+        avai_teams = copy.deepcopy(self.team_ids)
+        final_idxs = []
+
+        while len(avai_teams) >= self.num_teams:
+            selected_teams = random.sample(avai_teams, self.num_teams)
+            for team in selected_teams:
+                avai_pids = copy.deepcopy([i for i in batch_idxs_dict[team].keys()])
+                selected_pids = random.sample(avai_pids, self.num_pids_per_team)
+                for pid in selected_pids:
+                    batch_idxs = batch_idxs_dict[team][pid].pop(0)
+                    final_idxs.extend(batch_idxs)
+
+                    if len(batch_idxs_dict[team][pid]) == 0:
+                        del batch_idxs_dict[team][pid]
+
+                if len(batch_idxs_dict[team].keys()) < self.num_pids_per_team:
+                    avai_teams.remove(team)
+
+        return iter(final_idxs)
+
+    def __len__(self):
+        return self.length
+
+
 def build_train_sampler(
     data_source, train_sampler, batch_size=32, num_instances=4, **kwargs
 ):
@@ -99,5 +186,8 @@ def build_train_sampler(
 
     elif train_sampler == 'RandomSampler':
         sampler = RandomSampler(data_source)
+
+    #sampler = RandomIdentityAndTeamSampler(data_source, 36, 3, 4)
+    sampler = RandomIdentityAndTeamSampler(data_source, 64, 4, 4)
 
     return sampler

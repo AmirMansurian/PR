@@ -92,6 +92,7 @@ class Engine(object):
                         'rank1': cmc,
                         'mAP': mAP,
                         'ssmd': ssmd,
+                        'config': self.config,
                         'optimizer': self._optims[name].state_dict(),
                         'scheduler': self._scheds[name].state_dict()
                     },
@@ -126,13 +127,8 @@ class Engine(object):
     def run(
         self,
         save_dir='log',
-        max_epoch=0,
-        start_epoch=0,
-        print_freq=10,
         fixbase_epoch=0,
         open_layers=None,
-        start_eval=0,
-        eval_freq=-1,
         test_only=False,
         dist_metric='euclidean',
         normalize_feature=False,
@@ -151,7 +147,6 @@ class Engine(object):
             save_dir (str): directory to save model.
             max_epoch (int): maximum epoch.
             start_epoch (int, optional): starting epoch. Default is 0.
-            print_freq (int, optional): print_frequency. Default is 10.
             fixbase_epoch (int, optional): number of epochs to train ``open_layers`` (new layers)
                 while keeping base layers frozen. Default is 0. ``fixbase_epoch`` is counted
                 in ``max_epoch``.
@@ -409,11 +404,11 @@ class Engine(object):
         rerank=False,
         save_features=False
     ):
-        print('Extracting features from query set ...')
+        print('Extracting features from query set:')
         qf, q_pids, q_camids, q_anns = self._feature_extraction(query_loader)
         print('Done, obtained {} tensor'.format(qf.shape))
 
-        print('Extracting features from gallery set ...')
+        print('Extracting features from gallery set:')
         gf, g_pids, g_camids, g_anns = self._feature_extraction(gallery_loader)
         print('Done, obtained {} tensor'.format(gf.shape))
 

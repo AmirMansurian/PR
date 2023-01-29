@@ -119,7 +119,6 @@ def visualize_pca_multi(maps_all, feats, pids, tag):
 
     # plt.tight_layout()
     plt.tight_layout(pad=1.30, h_pad=1.6, w_pad=1.6)
-    # plt.savefig('/home/vso/log/features_part_maps/features_part_maps_{}.png'.format(tag)) # TODO fix location
     Logger.current_logger().add_figure("features_part_maps_{}".format(tag), fig, False)
     plt.close(fig)
 

@@ -2,6 +2,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import os
+from pathlib import Path
+
 import torch
 import torch.nn as nn
 import torch._utils
@@ -564,9 +566,9 @@ class HighResolutionNet(nn.Module):
             x[i] = self.incre_modules[i](x[i])
 
         x0_h, x0_w = x[0].size(2), x[0].size(3)
-        x1 = F.upsample(x[1], size=(x0_h, x0_w), mode='bilinear', align_corners=True)  # torch.Size([128, 256, 64, 32])
-        x2 = F.upsample(x[2], size=(x0_h, x0_w), mode='bilinear', align_corners=True)  # torch.Size([128, 512, 64, 32])
-        x3 = F.upsample(x[3], size=(x0_h, x0_w), mode='bilinear', align_corners=True)  # torch.Size([128, 1024, 64, 32])
+        x1 = F.interpolate(x[1], size=(x0_h, x0_w), mode='bilinear', align_corners=True)  # torch.Size([128, 256, 64, 32])
+        x2 = F.interpolate(x[2], size=(x0_h, x0_w), mode='bilinear', align_corners=True)  # torch.Size([128, 512, 64, 32])
+        x3 = F.interpolate(x[3], size=(x0_h, x0_w), mode='bilinear', align_corners=True)  # torch.Size([128, 1024, 64, 32])
 
         x = torch.cat([x[0], x1, x2, x3], 1)  # torch.Size([b, 1920, 64, 32])
         if self.enable_dim_reduction:
@@ -584,6 +586,10 @@ class HighResolutionNet(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
     def load_param(self, pretrained_path):
+        if not Path(pretrained_path).exists():
+            raise FileNotFoundError(f'HRNet-W32-C pretrained weights not found under "{pretrained_path}", please download it '
+                                    f'first at https://github.com/HRNet/HRNet-Image-Classification or specify the correct '
+                                    f'weights dir location with the cfg.model.bpbreid.hrnet_pretrained_path config.')
         pretrained_dict = torch.load(pretrained_path)
         print('=> loading pretrained model {}'.format(pretrained_path))
         model_dict = self.state_dict()
@@ -602,7 +608,7 @@ def init_pretrained_weights(model, pretrain_path, model_key):
     model.load_param(path)
 
 
-def hrnet32(num_classes, config, loss='part_based', pretrained=True, enable_dim_reduction=True, dim_reduction_channels=256, **kwargs):
+def hrnet32(num_classes, loss='part_based', pretrained=True, enable_dim_reduction=True, dim_reduction_channels=256, pretrained_path='', **kwargs):
     cfg = get_hrnet_config()
     model = HighResolutionNet(
         cfg,
@@ -610,5 +616,5 @@ def hrnet32(num_classes, config, loss='part_based', pretrained=True, enable_dim_
         dim_reduction_channels
     )
     if pretrained:
-        init_pretrained_weights(model, config.model.bpbreid.hrnet_pretrained_path, 'hrnet-w32')
+        init_pretrained_weights(model, pretrained_path, 'hrnet-w32')
     return model

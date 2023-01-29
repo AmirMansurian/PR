@@ -139,7 +139,6 @@
 #     # cfg.train.lr_scheduler
 #     # cfg.train.stepsize
 #     # cfg.train.gamma
-#     # cfg.train.print_freq
 #     # cfg.train.seed
 #     # cfg.train.eval_freq
 #     # cfg.train.batch_debug_freq

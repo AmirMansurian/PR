@@ -26,11 +26,9 @@ class CrossEntropyLoss(nn.Module):
         label_smooth (bool, optional): whether to apply label smoothing. Default is True.
     """
 
-    def __init__(self, num_classes, eps=0.1, use_gpu=True, label_smooth=True):
+    def __init__(self, eps=0.1, label_smooth=True):
         super(CrossEntropyLoss, self).__init__()
-        self.num_classes = num_classes
         self.eps = eps if label_smooth else 0
-        self.use_gpu = use_gpu
         self.logsoftmax = nn.LogSoftmax(dim=1)
 
     def forward(self, inputs, targets, weights=None):
@@ -41,13 +39,14 @@ class CrossEntropyLoss(nn.Module):
             targets (torch.LongTensor): ground truth labels with shape (batch_size).
                 Each position contains the label index.
         """
-        assert inputs.shape[0] == len(targets)
+        assert inputs.shape[0] == targets.shape[0]
+        num_classes = inputs.shape[1]
         log_probs = self.logsoftmax(inputs)
         zeros = torch.zeros(log_probs.size())
-        targets = zeros.scatter_(1, (targets).unsqueeze(1).data.cpu(), 1)
-        if self.use_gpu:
+        targets = zeros.scatter_(1, targets.unsqueeze(1).data.cpu(), 1)
+        if inputs.is_cuda:
             targets = targets.cuda()
-        targets = (1 - self.eps) * targets + self.eps / self.num_classes
+        targets = (1 - self.eps) * targets + self.eps / num_classes
         if weights is not None:
             result = (-targets * log_probs).sum(dim=1)
             result = result * nn.functional.normalize(weights, p=1, dim=0)

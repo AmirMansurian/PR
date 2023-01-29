@@ -323,7 +323,7 @@ def compute_model_complexity(
     if next(model.parameters()).is_cuda:
         input_img = input_img.cuda()
     if isinstance(model, BPBreID):
-        model(input_img, torch.ones(1, cfg.data.parts_num+1, 16, 8))  # forward
+        model(input_img, torch.ones(1, cfg.model.bpbreid.masks.parts_num+1, 16, 8))  # forward
     else:
         model(input_img)  # forward
     for handle in registered_handles:

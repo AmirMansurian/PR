@@ -259,7 +259,7 @@ def count_num_param(model):
 
 
 def load_pretrained_weights(model, weight_path):
-    r"""Loads pretrianed weights to model.
+    r"""Loads pretrained weights to model.
 
     Features::
         - Incompatible layers (unmatched in name or size) will be ignored.

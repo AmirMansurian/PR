@@ -52,8 +52,7 @@ class VideoSoftmaxEngine(ImageSoftmaxEngine):
         )
         engine.run(
             max_epoch=60,
-            save_dir='log/resnet50-softmax-mars',
-            print_freq=10
+            save_dir='log/resnet50-softmax-mars'
         )
     """
 

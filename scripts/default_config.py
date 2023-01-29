@@ -13,19 +13,20 @@ def get_default_config():
 
     # project
     cfg.project = CN()
-    cfg.project.name = "Person-Re-Identification"
+    cfg.project.name = "BPBreID"  # will be used as WanDB project name
     cfg.project.experiment_name = ""
     cfg.project.diff_config = ""
     cfg.project.notes = ""
     cfg.project.tags = []
     cfg.project.config_file = ""
     cfg.project.debug_mode = False
-    cfg.project.logger = CN()
+    cfg.project.logger = CN()  # Choose experiment manager client to use or simply use disk dump / matplotlib
     cfg.project.logger.use_clearml = False
     cfg.project.logger.use_neptune = False
     cfg.project.logger.use_tensorboard = False
     cfg.project.logger.use_wandb = False
     cfg.project.logger.matplotlib_show = False
+    cfg.project.logger.save_disk = True  # save images to disk
     cfg.project.job_id = random.randint(0, 1_000_000_000)
     cfg.project.experiment_id = str(uuid.uuid4())
     cfg.project.start_time = datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%MS")
@@ -33,29 +34,41 @@ def get_default_config():
     # model
     cfg.model = CN()
     cfg.model.name = 'bpbreid'
-    cfg.model.pretrained = True  # automatically load pretrained model weights if available (For example Resnet
+    cfg.model.pretrained = True  # automatically load pretrained model weights if available (For example HRNet
     # pretrained weights on ImageNet)
-    cfg.model.load_weights = ''  # path to model weights
+    cfg.model.load_weights = ''  # path to model weights, for doing inference with a model that was saved on disk with 'save_model_flag'
+    cfg.model.load_config = False  # load config saved with model weights and overwrite current config
     cfg.model.resume = ''  # path to checkpoint for resume training
     cfg.model.save_model_flag = False  # path to checkpoint for resume training
     # configs for our part-based model BPBreID
     cfg.model.bpbreid = CN()
     cfg.model.bpbreid.pooling = 'gwap'  # ['gap', 'gmp', 'gwap', 'gwap2']
-    cfg.model.bpbreid.normalization = 'identity'  # ['identity', 'batch_norm_2d']
-    cfg.model.bpbreid.mask_filtering_training = False
-    cfg.model.bpbreid.mask_filtering_testing = True
-    cfg.model.bpbreid.last_stride = 1
-    cfg.model.bpbreid.dim_reduce = 'after_pooling'  # 'none', 'before_pooling', 'after_pooling', 'after_pooling_with_dropout'
-    cfg.model.bpbreid.dim_reduce_output = 512
-    cfg.model.bpbreid.backbone = 'resnet50'  # 'resnet50' 'hrnet32' 'fastreid_resnet_ibn_nl'
-    cfg.model.bpbreid.learnable_attention_enabled = True
-    cfg.model.bpbreid.test_embeddings = ['bn_foreg', 'parts']
-    cfg.model.bpbreid.test_use_target_segmentation = 'none'
-    cfg.model.bpbreid.training_binary_visibility_score = True
-    cfg.model.bpbreid.testing_binary_visibility_score = True
-    cfg.model.bpbreid.shared_parts_id_classifier = False
-    cfg.model.bpbreid.normalized_bned_embeddings = False
-    cfg.model.bpbreid.hrnet_pretrained_path = "/home/vso/projects/ISP-reID/pretrained_models"
+    cfg.model.bpbreid.normalization = 'identity'  # ['identity', 'batch_norm_2d'] - obsolete, always use identity
+    cfg.model.bpbreid.mask_filtering_training = False  # use visibility scores at training - do not have an influence on testing performance yet, to be improved
+    cfg.model.bpbreid.mask_filtering_testing = True  # use visibility scores at testing - do have a big influence on testing performance when activated
+    cfg.model.bpbreid.last_stride = 1  # last stride of the resnet backbone - 1 for better performance
+    cfg.model.bpbreid.dim_reduce = 'after_pooling'  #  where to apply feature dimensionality reduction (before or after global pooling) ['none', 'before_pooling', 'after_pooling', 'before_and_after_pooling', 'after_pooling_with_dropout']
+    cfg.model.bpbreid.dim_reduce_output = 512  # reduce feature dimension to this value when above config is not 'none'
+    cfg.model.bpbreid.backbone = 'resnet50'  # ['resnet50', 'hrnet32', 'fastreid_resnet_ibn_nl']
+    cfg.model.bpbreid.learnable_attention_enabled = True  # use learnable attention mechanism to pool part features, otherwise, use fixed attention weights from external (pifpaf) heatmaps/masks
+    cfg.model.bpbreid.test_embeddings = ['bn_foreg', 'parts']  # embeddings to use at inference among ['globl', 'foreg', 'backg', 'conct', 'parts']: append 'bn_' suffix to use batch normed embeddings
+    cfg.model.bpbreid.test_use_target_segmentation = 'none'  # ['soft', 'hard', 'none'] - use external part mask to further refine the attention weights at inference
+    cfg.model.bpbreid.training_binary_visibility_score = True  # use binary visibility score (0 or 1) instead of continuous visibility score (0 to 1) at training
+    cfg.model.bpbreid.testing_binary_visibility_score = True  # use binary visibility score (0 or 1) instead of continuous visibility score (0 to 1) at testing
+    cfg.model.bpbreid.shared_parts_id_classifier = False  # if each part branch uses share weights for the identity classifier. Used only when the identity loss is used on part-based embeddings.
+    cfg.model.bpbreid.hrnet_pretrained_path = "pretrained_models/" # path to pretrained weights for HRNet backbone, download on our Google Drive or on https://github.com/HRNet/HRNet-Image-Classification
+    # number of horizontal stripes desired. When BPBreID is used, this variable will be automatically filled depending
+    # on "data.masks.preprocess"
+    cfg.model.bpbreid.masks = CN()
+    cfg.model.bpbreid.masks.type = 'disk'  # when 'disk' is used, load part masks from storage in 'cfg.model.bpbreid.masks.dir' folder
+    # when 'stripes' is used, divide the image in 'cfg.model.bpbreid.masks.parts_num' horizontal stripes in a PCB style.
+    # 'stripes' with parts_num=1 can be used to emulate the global method Bag of Tricks (BoT)
+    cfg.model.bpbreid.masks.parts_num = 1  # number of part-based embedding to extract. When PCB is used, change this parameter to the number of stripes required
+    cfg.model.bpbreid.masks.dir = 'pifpaf_maskrcnn_filtering'  # masks will be loaded from 'dataset_path/masks/<cfg.model.bpbreid.masks.dir>' directory
+    cfg.model.bpbreid.masks.preprocess = 'eight'  # how to group the 36 pifpaf parts into smaller human semantic groups ['eight', 'five', 'four', 'two', ...], more combination available inside 'torchreid/data/masks_transforms/__init__.masks_preprocess_pifpaf'
+    cfg.model.bpbreid.masks.softmax_weight = 15
+    cfg.model.bpbreid.masks.background_computation_strategy = 'threshold'  # threshold, diff_from_max
+    cfg.model.bpbreid.masks.mask_filtering_threshold = 0.5
 
     # data
     cfg.data = CN()
@@ -68,14 +81,14 @@ def get_default_config():
     cfg.data.height = 256 # image height
     cfg.data.width = 128 # image width
     cfg.data.combineall = False # combine train, query and gallery for training
-    cfg.data.transforms = ['rc', 're'] # data augmentation ['rf', 'rc', 're', 'cj']
-    cfg.data.ro = CN()
-    cfg.data.ro.path = "/home/vso/datasets/other/Pascal_VOC/VOCdevkit/VOC2012"
+    cfg.data.transforms = ['rc', 're']  # data augmentation from ['rf', 'rc', 're', 'cj'] = ['random flip', 'random crop', 'random erasing', 'color jitter']
+    cfg.data.ro = CN()  # parameters for random occlusion data augmentation with Pascal VOC, to be improved, not maintained
+    cfg.data.ro.path = ""
     cfg.data.ro.p = 0.5
     cfg.data.ro.n = 1
     cfg.data.ro.min_overlap = 0.5
     cfg.data.ro.max_overlap = 0.8
-    cfg.data.cj = CN()
+    cfg.data.cj = CN()  # parameters for color jitter data augmentation
     cfg.data.cj.brightness = 0.2
     cfg.data.cj.contrast = 0.15
     cfg.data.cj.saturation = 0.
@@ -84,23 +97,8 @@ def get_default_config():
     cfg.data.cj.p = 0.5
     cfg.data.norm_mean = [0.485, 0.456, 0.406] # default is imagenet mean
     cfg.data.norm_std = [0.229, 0.224, 0.225] # default is imagenet std
-    cfg.data.save_dir = 'log' # path to save log
+    cfg.data.save_dir = 'logs'  # save figures, images, logs, etc. in this folder
     cfg.data.load_train_targets = False
-    cfg.data.masks_dir = 'pifpaf_maskrcnn_filtering'
-    cfg.data.masks = CN()
-    cfg.data.masks.preprocess = 'eight'  # 'full', 'id', 'ids', 'bs_fu', 'bs_fu_bb', 'mu_sc', 'four', 'four_no', 'four_v', 'four_v_pif', 'five_v', 'six', 'six_no', 'eight'
-    cfg.data.masks.softmax_weight = 15
-    cfg.data.masks.background_computation_strategy = 'threshold'  # threshold, diff_from_max
-    cfg.data.masks.mask_filtering_threshold = 0.5
-    cfg.data.motchallenge = CN()
-    cfg.data.motchallenge.min_vis = 0.0
-    cfg.data.motchallenge.min_h = 0
-    cfg.data.motchallenge.min_w = 0
-    cfg.data.motchallenge.min_samples_per_id = 4
-    cfg.data.motchallenge.max_samples_per_id = 40
-    cfg.data.motchallenge.train_ratio = 0.8
-    cfg.data.motchallenge.ratio_query_per_id = 0.2
-    cfg.data.motchallenge.ratio_gallery_per_id = 1.0
 
     # specific datasets
     cfg.market1501 = CN()
@@ -109,11 +107,6 @@ def get_default_config():
     cfg.cuhk03.labeled_images = False # use labeled images, if False, use detected images
     cfg.cuhk03.classic_split = False # use classic split by Li et al. CVPR14
     cfg.cuhk03.use_metric_cuhk03 = False # use cuhk03's metric for evaluation
-    cfg.dartfish = CN()
-    cfg.dartfish.train_size = 10_000
-    cfg.dartfish.val_size = 2_000
-    cfg.dartfish.test_size = 10_000
-    cfg.dartfish.query_per_id = 10_000
 
     # sampler
     cfg.sampler = CN()
@@ -145,7 +138,6 @@ def get_default_config():
     cfg.train.lr_scheduler = 'warmup_multi_step'
     cfg.train.stepsize = [40, 70] # stepsize to decay learning rate
     cfg.train.gamma = 0.1 # learning rate decay multiplier
-    cfg.train.print_freq = 20 # print frequency
     cfg.train.seed = 1 # random seed
     cfg.train.eval_freq = -1 # evaluation frequency (-1 means to only test after training)
     cfg.train.batch_debug_freq = 0
@@ -164,22 +156,22 @@ def get_default_config():
 
     # loss
     cfg.loss = CN()
-    cfg.loss.name = 'part_based'
+    cfg.loss.name = 'part_based'  # use part based engine to train bpbreid with GiLt loss
     cfg.loss.part_based = CN()
-    cfg.loss.part_based.name = 'part_based_triplet_loss_mean' # ['inter_parts_triplet_loss', 'intra_parts_triplet_loss', 'part_based_triplet_loss_max', 'part_based_triplet_loss_mean', 'part_based_triplet_loss_min', 'part_based_triplet_loss_max_min', 'part_based_triplet_loss_random_max_min']
-    cfg.loss.part_based.ppl = "cl" # part prediction loss: ['cl', 'fl', 'dl'], cross entropy loss with label smoothing, focal loss, dice loss
-    cfg.loss.part_based.weights = CN()
+    cfg.loss.part_based.name = 'part_averaged_triplet_loss' # ['inter_parts_triplet_loss', 'intra_parts_triplet_loss', 'part_max_triplet_loss', 'part_averaged_triplet_loss', 'part_min_triplet_loss', 'part_max_min_triplet_loss', 'part_random_max_min_triplet_loss']
+    cfg.loss.part_based.ppl = "cl" # body part prediction loss: ['cl', 'fl', 'dl'] = [cross entropy loss with label smoothing, focal loss, dice loss]
+    cfg.loss.part_based.weights = CN()  # weights to apply for the different losses and different types of embeddings, for more details, have a look at 'torchreid/losses/GiLt_loss.py'
     cfg.loss.part_based.weights[GLOBAL] = CN()
-    cfg.loss.part_based.weights[GLOBAL].ce = 1.
+    cfg.loss.part_based.weights[GLOBAL].id = 1.
     cfg.loss.part_based.weights[GLOBAL].tr = 0.
     cfg.loss.part_based.weights[FOREGROUND] = CN()
-    cfg.loss.part_based.weights[FOREGROUND].ce = 1.
+    cfg.loss.part_based.weights[FOREGROUND].id = 1.
     cfg.loss.part_based.weights[FOREGROUND].tr = 0.
     cfg.loss.part_based.weights[CONCAT_PARTS] = CN()
-    cfg.loss.part_based.weights[CONCAT_PARTS].ce = 1.
+    cfg.loss.part_based.weights[CONCAT_PARTS].id = 1.
     cfg.loss.part_based.weights[CONCAT_PARTS].tr = 0.
     cfg.loss.part_based.weights[PARTS] = CN()
-    cfg.loss.part_based.weights[PARTS].ce = 0.
+    cfg.loss.part_based.weights[PARTS].id = 0.
     cfg.loss.part_based.weights[PARTS].tr = 1.
     cfg.loss.part_based.weights[PIXELS] = CN()
     cfg.loss.part_based.weights[PIXELS].ce = 0.35
@@ -193,7 +185,9 @@ def get_default_config():
     # test
     cfg.test = CN()
     cfg.test.batch_size = 128
-    cfg.test.batch_size_pairwise_dist_matrix = 5000
+    cfg.test.batch_size_pairwise_dist_matrix = 500  # query to gallery distance matrix is computed on the GPU by batch of gallery samples with this size.
+    # To avoid out of memory issue, we don't compute it for all gallery samples at the same time, but we compute it
+    # in batches of 'batch_size_pairwise_dist_matrix' gallery samples.
     cfg.test.dist_metric = 'euclidean' # distance metric, ['euclidean', 'cosine']
     cfg.test.normalize_feature = True # normalize feature vectors before computing distance
     cfg.test.ranks = [1, 5, 10, 20] # cmc ranks
@@ -203,22 +197,19 @@ def get_default_config():
     cfg.test.visrank = False # visualize ranked results (only available when cfg.test.evaluate=True)
     cfg.test.visrank_topk = 10 # top-k ranks to visualize
     cfg.test.visrank_count = 10 # number of top-k ranks to plot
-    cfg.test.visrank_q_idx_list = [0, 1, 2, 3, 4, 5] # list of ids of queries for which we want to plot topk rank. If len(visrank_q_idx_list) < visrank_count, remaining ids will be random
-    # for i, sample in enumerate(datamanager.test_loader['occluded_duke']['query'].dataset.query):
-    #     if ntpath.basename(sample[0]) in ['4804_c6_f0202700.jpg', '4760_c7_f0184430.jpg', '4726_c6_f0169726.jpg', '4681_c6_f0155553.jpg', '0749_c1_f0188383.jpg', '0114_c1_f0072838.jpg', '0076_c1_f0065392.jpg']:
-    #         print("{} - {}".format(i, sample))
+    cfg.test.visrank_q_idx_list = [0, 1, 2, 3, 4, 5]  # list of ids of queries for which we want to plot topk rank. If len(visrank_q_idx_list) < visrank_count, remaining ids will be random
     cfg.test.vis_feature_maps = False
     cfg.test.visrank_per_body_part = False
     cfg.test.vis_embedding_projection = False
     cfg.test.save_features = False # save test set extracted features to disk
-    cfg.test.detailed_ranking = True
+    cfg.test.detailed_ranking = True  # display ranking performance for each part individually
     cfg.test.part_based = CN()
-    cfg.test.part_based.dist_combine_strat = "mean"
+    cfg.test.part_based.dist_combine_strat = "mean"  # ['mean', 'max'] local part based distances are combined into a global distance using this strategy
 
     # inference
     cfg.inference = CN()
     cfg.inference.enabled = False
-    cfg.inference.input_folder = "/home/vso/projects/StrongSORT/pregenerated_files/MOT17_val_YOLOX_crops_for_reid_simpleCNN"
+    cfg.inference.input_folder = ""
 
     return cfg
 
@@ -227,6 +218,8 @@ keys_to_ignore_in_diff = {
     "cfg.model.save_model_flag",
     "cfg.model.bpbreid.backbone",
     "cfg.model.bpbreid.learnable_attention_enabled",
+    "cfg.model.bpbreid.masks.parts_num",
+    "cfg.model.bpbreid.masks.dir",
     "cfg.data.type",
     "cfg.data.root",
     "cfg.data.sources",
@@ -235,8 +228,6 @@ keys_to_ignore_in_diff = {
     "cfg.data.split_id",
     "cfg.data.combineall",
     "cfg.data.save_dir",
-    "cfg.data.parts_num",
-    "cfg.train.print_freq",
     "cfg.train.eval_freq",
     "cfg.train.batch_debug_freq",
     "cfg.train.batch_log_freq",
@@ -247,8 +238,8 @@ keys_to_ignore_in_diff = {
     "cfg.test.evaluate",
     "cfg.test.start_eval",
     "cfg.test.rerank",
-    #"cfg.test.visrank",
-    #"cfg.test.visrank_topk",
+    "cfg.test.visrank",
+    "cfg.test.visrank_topk",
     "cfg.test.visrank_count",
     "cfg.test.visrank_q_idx_list",
     "cfg.test.vis_feature_maps",
@@ -257,7 +248,6 @@ keys_to_ignore_in_diff = {
     "cfg.test.save_features",
     "cfg.test.detailed_ranking",
     "cfg.train.open_layers",
-    "cfg.data.masks_dir",
     "cfg.model.load_weights",
 }
 
@@ -287,7 +277,7 @@ def imagedata_kwargs(cfg):
         'cuhk03_classic_split': cfg.cuhk03.classic_split,
         'market1501_500k': cfg.market1501.use_500k_distractors,
         'use_masks': cfg.loss.name == 'part_based',
-        'masks_dir': cfg.data.masks_dir,
+        'masks_dir': cfg.model.bpbreid.masks.dir,
     }
 
 
@@ -344,14 +334,9 @@ def lr_scheduler_kwargs(cfg):
 def engine_run_kwargs(cfg):
     return {
         'save_dir': cfg.data.save_dir,
-        'max_epoch': cfg.train.max_epoch,
-        'start_epoch': cfg.train.start_epoch,
         'fixbase_epoch': cfg.train.fixbase_epoch,
         'open_layers': cfg.train.open_layers,
-        'start_eval': cfg.test.start_eval,
-        'eval_freq': cfg.train.eval_freq,
         'test_only': cfg.test.evaluate,
-        'print_freq': cfg.train.print_freq,
         'dist_metric': cfg.test.dist_metric,
         'normalize_feature': cfg.test.normalize_feature,
         'visrank': cfg.test.visrank,
@@ -363,6 +348,7 @@ def engine_run_kwargs(cfg):
         'rerank': cfg.test.rerank,
         'save_features': cfg.test.save_features
     }
+
 
 def display_config_diff(cfg, default_cfg_copy):
     def iterdict(d):

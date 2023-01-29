@@ -140,3 +140,4 @@ model-zoo/
 pretrained_models/
 debug*
 /.idea/
+/configs_user/
