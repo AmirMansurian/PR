@@ -384,7 +384,7 @@ def init_pretrained_weights(model, model_url):
     #pretrain_dict = model_zoo.load_url(model_url)
     ######################################################################################
     import torch
-    pretrain_dict = torch.load('/kaggle/working/resnet50-19c8e357.pth')
+    pretrain_dict = torch.load('resnet50-19c8e357.pth')
     ######################################################################################
     model_dict = model.state_dict()
     pretrain_dict = {
