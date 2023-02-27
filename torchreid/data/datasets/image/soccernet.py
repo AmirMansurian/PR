@@ -151,11 +151,11 @@ class SoccerNet(ImageDataset):
 
             #return data2, indice
 
-            ids = list(set([i['pid'] for i in data]))[:350]
+            ids = list(set([i['pid'] for i in data]))
             index = np.random.permutation(len(ids))
             indice = [ids[j] for j in index]
             for player in indice:
-                idx = np.random.permutation(len(id_dict[player]))[:10]
+                idx = np.random.permutation(len(id_dict[player]))
                 data2 += [id_dict[player][f] for f in idx]
 
             for i, player in enumerate(data2):
