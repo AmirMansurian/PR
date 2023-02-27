@@ -47,7 +47,7 @@ model:
     last_stride: 1
     learnable_attention_enabled: False
     dim_reduce: 'after_pooling' # 'none', 'before_pooling', 'after_pooling', 'after_pooling_with_dropout'
-    dim_reduce_output: 128
+    dim_reduce_output: 512
     backbone: 'resnet50' # 'hrnet32' 'resnet50'
     test_embeddings: ['parts'] #  ['globl', 'foreg', 'parts']
     test_use_target_segmentation: 'none' # 'none' 'hard' 'soft'
@@ -56,7 +56,7 @@ model:
       type: 'stripes'
       dir: 'pifpaf'
       parts_num: 2
-      preprocess: 'strp_2'  # 'none', 'full', 'id', 'ids', 'bs_fu', 'bs_fu_bb', 'mu_sc', 'four', 'four_no', 'four_v', 'four_v_pif', 'five_v', 'six', 'six_no', 'eight'
+      preprocess: 'strp_5'  # 'none', 'full', 'id', 'ids', 'bs_fu', 'bs_fu_bb', 'mu_sc', 'four', 'four_no', 'four_v', 'four_v_pif', 'five_v', 'six', 'six_no', 'eight'
       background_computation_strategy: 'threshold'  # threshold, diff_from_max
       softmax_weight: 15
       mask_filtering_threshold: 0.6
@@ -100,7 +100,7 @@ test:
   batch_size_pairwise_dist_matrix: 5000
   normalize_feature: True
   dist_metric: 'cosine' # distance metric, ['euclidean', 'cosine']
-  evaluate: False # test only
+  evaluate: True # test only
   visrank: True
   visrank_per_body_part: False
   vis_embedding_projection: False
