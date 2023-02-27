@@ -34,8 +34,8 @@ sampler:
 
 model:
   name: 'bpbreid'
-  pretrained: True
-  load_weights: 'resnet50-19c8e357.pth'
+  pretrained: False
+  load_weights: ''
   save_model_flag: True
   bpbreid:
     pooling: 'gwap'
